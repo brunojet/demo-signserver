@@ -20,7 +20,7 @@ data "terraform_remote_state" "persistence" {
 # Lambda (placeholder)
 module "signer_lambda" {
   source                = "../modules/lambda"
-  name                  = "signer-lambda"
+  name                  = "signer-interface"
   tags                  = local.tags
   project_env           = local.project_env
   handler               = "hello.handler"
