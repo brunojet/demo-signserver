@@ -134,3 +134,40 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# .gitignore para Terraform e arquivos sensíveis
+
+# Arquivos de estado do Terraform
+*.tfstate
+*.tfstate.*
+
+# Diretórios de cache do Terraform
+.terraform/
+
+# Planos de execução
+*.tfplan
+
+# Arquivos de variáveis sensíveis
+*.tfvars
+*.tfvars.json
+
+# Arquivos de saída
+crash.log
+crash.*.log
+
+# Arquivos de override
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Arquivos de backup
+*.backup
+
+# Outras configurações locais
+.terraformrc
+terraform.rc
+.terraform.**
+
+iac/infra/**/*.js
+iac/infra/**/*.zip
