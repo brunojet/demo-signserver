@@ -42,14 +42,17 @@ Abaixo está um exemplo de como pode ser organizada a estrutura de diretórios e
 │   │   └── interfaces/
 │   │       ├── worker_handler.go        # Handler para eventos do workerpool
 │   │       └── signing_adapter_interface.go # Interface que define o contrato dos adaptadores de assinadores
+│   └── repository/                 # Repositórios compartilhados
+│       ├── domain/                 # Interfaces dos repositórios (contratos)
+│       │   ├── device_profile.go
+│       │   └── intent.go
+│       └── service/                # Interfaces/contratos de serviços auxiliares
+│           ├── device_profile.go
+│           └── intent.go
 ├── pkg/                        # Código reutilizável/exportável por outros projetos
-│   ├── repository/             # Repositórios compartilhados
-│   │   ├── domain/                 # Interfaces dos repositórios (contratos)
-│   │   │   ├── device_profile.go
-│   │   │   └── intent.go
-│   │   ├── service/                # Interfaces/contratos de serviços auxiliares
-│   │   │   ├── device_profile.go
-│   │   │   └── intent.go
+│   ├── repository/                 # Repositórios compartilhados
+│   │   ├── service/                # Interface/contrato para operações de repositorio
+│   │   │   └── repository.go
 │   │   ├── adapters/               # Implementações concretas dos repositórios
 │   │   |   └── dynamodb.go         # Adapter para DynamoDB (pode haver outros, ex: postgres.go)
 │   |   └── interfaces/             # Interfaces públicas do serviço
