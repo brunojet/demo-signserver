@@ -91,33 +91,25 @@ func getField(v reflect.Value, fieldName string, expectedKind reflect.Kind) refl
 	return reflect.Value{}
 }
 
-// setField atribui valor string ao campo (struct ou map) se possível, criando no map se necessário
-func setField(v reflect.Value, fieldName, value string) {
+// setField atribui valor ao campo (struct ou map) se possível, criando no map se necessário
+func setField(v reflect.Value, fieldName string, value interface{}) {
 	if v.Kind() == reflect.Struct {
 		f := v.FieldByName(fieldName)
-		if f.IsValid() && f.CanSet() && f.Kind() == reflect.String {
-			f.SetString(value)
+		if f.IsValid() && f.CanSet() {
+			switch f.Kind() {
+			case reflect.String:
+				if s, ok := value.(string); ok {
+					f.SetString(s)
+				}
+			case reflect.Int64:
+				if i, ok := value.(int64); ok {
+					f.SetInt(i)
+				}
+			}
 		}
 	} else if v.Kind() == reflect.Map {
-		// Sempre adiciona ao map, mesmo se value for vazio
 		v.SetMapIndex(reflect.ValueOf(fieldName), reflect.ValueOf(value))
 	}
-}
-
-// getOrCreateField centraliza acesso e criação de campos em struct/map via reflection
-func getOrCreateField(v reflect.Value, fieldName string, expectedKind reflect.Kind) reflect.Value {
-	// Primeiro tenta obter o campo normalmente
-	if f := getField(v, fieldName, expectedKind); f.IsValid() {
-		return f
-	}
-	// Se não existir e for map, cria valor string vazio
-	if v.Kind() == reflect.Map {
-		key := reflect.ValueOf(fieldName)
-		val := reflect.ValueOf("")
-		v.SetMapIndex(key, val)
-		return v.MapIndex(key)
-	}
-	return reflect.Value{}
 }
 
 // SetPKSKFromID preenche PK e SK a partir de ID (se existir). Se PK/SK não existirem, adiciona via reflection.
@@ -139,24 +131,17 @@ func SetPKSKFromID(obj interface{}) {
 	}
 }
 
-// SetIDFromPKSK preenche ID a partir de PK e SK. Se ID não existir, adiciona via reflection (para map).
+// SetIDFromPKSK preenche ID a partir de PK e SK. Se PK não existir ou estiver vazio, não faz nada.
 func SetIDFromPKSK(obj interface{}) {
 	v := getReflectObj(obj)
-	pkField := getField(v, "PK", reflect.String)
-	skField := getField(v, "SK", reflect.String)
-	var pk, sk string
-	if pkField.IsValid() {
-		pk = pkField.String()
+	pk := getField(v, "PK", reflect.String)
+	if !pk.IsValid() || pk.String() == "" {
+		return
 	}
-
-	if skField.IsValid() {
-		sk = skField.String()
-	}
-	id := ""
-	if pk != "" && sk != "" {
-		id = pk + ";" + sk
-	} else if pk != "" {
-		id = pk
+	id := pk.String()
+	sk := getField(v, "SK", reflect.String)
+	if sk.IsValid() && sk.String() != "" {
+		id += ";" + sk.String()
 	}
 	setField(v, "ID", id)
 }
@@ -165,22 +150,8 @@ func SetIDFromPKSK(obj interface{}) {
 func SetTimestamps(obj interface{}, isCreate bool) {
 	v := getReflectObj(obj)
 	now := time.Now().Unix()
-	if v.Kind() == reflect.Struct {
-		updatedAt := getOrCreateField(v, "UpdatedAt", reflect.Int64)
-		if isCreate {
-			createdAt := getOrCreateField(v, "CreatedAt", reflect.Int64)
-			if createdAt.IsValid() && createdAt.CanSet() {
-				createdAt.SetInt(now)
-			}
-		}
-		if updatedAt.IsValid() && updatedAt.CanSet() {
-			updatedAt.SetInt(now)
-		}
-	} else if v.Kind() == reflect.Map {
-		// Para map, setar diretamente
-		if isCreate {
-			v.SetMapIndex(reflect.ValueOf("CreatedAt"), reflect.ValueOf(now))
-		}
-		v.SetMapIndex(reflect.ValueOf("UpdatedAt"), reflect.ValueOf(now))
+	if isCreate {
+		setField(v, "CreatedAt", now)
 	}
+	setField(v, "UpdatedAt", now)
 }
