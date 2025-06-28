@@ -8,14 +8,6 @@ const (
 	SignerGertec   Signer = "gertec"
 )
 
-// BaseEntity contém campos comuns para entidades persistidas.
-type BaseEntity struct {
-	PK        string `dynamodbav:"pk"`
-	SK        string `dynamodbav:"sk"`
-	CreatedAt int64  `dynamodbav:"created_at"`
-	UpdatedAt int64  `dynamodbav:"updated_at"`
-}
-
 // DeviceProfileConfig representa configurações específicas de perfil de dispositivo.
 type DeviceProfileConfig struct {
 	Key   string `dynamodbav:"key"`
@@ -57,7 +49,6 @@ type RequestHistoryEntry struct {
 
 // SignRequest representa a entidade de intenção de assinatura.
 type SignRequest struct {
-	BaseEntity
 	SignProfileId string                `dynamodbav:"sign_profile_id"`
 	SigningStatus SignStep              `dynamodbav:"signing_status"`
 	UnsignedFile  BucketInfo            `dynamodbav:"unsigned_file"`
@@ -75,7 +66,7 @@ type TransferInfo struct {
 
 // SignProfile representa o perfil de dispositivo associado à intenção.
 type SignProfile struct {
-	BaseEntity
+	ID          string                `json:"id,omitempty"`
 	Signer      Signer                `dynamodbav:"signer"`
 	Description string                `dynamodbav:"description"`
 	Configs     []DeviceProfileConfig `dynamodbav:"configs"`

@@ -37,6 +37,8 @@ func NewSignProfileService() *SignProfileService {
 }
 
 func (s *SignProfileService) CreateProfile(profile *domain.SignProfile) error {
+	db_services.SetPKSKFromID(profile)
+	db_services.SetTimestamps(profile, true)
 	item, err := db_services.MarshalItem(profile)
 	if err != nil {
 		return err
@@ -55,10 +57,13 @@ func (s *SignProfileService) GetProfileByID(id string) (*domain.SignProfile, err
 	if err != nil {
 		return nil, err
 	}
+	db_services.SetIDFromPKSK(&profile)
 	return &profile, nil
 }
 
 func (s *SignProfileService) UpdateProfile(profile *domain.SignProfile) error {
+	db_services.SetPKSKFromID(profile)
+	db_services.SetTimestamps(profile, false)
 	item, err := db_services.MarshalItem(profile)
 	if err != nil {
 		return err
