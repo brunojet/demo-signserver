@@ -8,19 +8,21 @@
 ## 2. Implementação dos Pacotes Genéricos (`pkg/`)
 - [ ] Definir e implementar as interfaces/contratos em:
   - [ ] `pkg/shared/domain/` (entidades centrais)
-  - [ ] `pkg/repository/domain/` (interfaces de repositório)
-  - [ ] `pkg/storage/service/` (interface de storage)
+  - [ ] `pkg/repository/services/` (implementações de repositório)
+  - [ ] `pkg/repository/mock/` (mocks de repositório para testes)
+  - [ ] `pkg/storage/services/` (implementações de storage)
+  - [ ] `pkg/storage/mock/` (mocks de storage para testes)
   - [ ] `pkg/notification/domain/` e `service/` (notificação genérica)
 - [ ] Implementar os adapters genéricos:
-  - [ ] `pkg/repository/adapters/dynamodb.go` (e outros, se necessário)
-  - [ ] `pkg/storage/adapters/s3.go`
+  - [ ] `pkg/repository/services/dynamodb_service.go` (e outros, se necessário)
+  - [ ] `pkg/storage/services/s3_service.go`
   - [ ] `pkg/notification/adapters/webhook.go` (e outros canais)
 - [ ] Implementar o pool de workers em `pkg/workerpool/service/workerpool.go`
 
 ## 3. Testes Unitários dos Pacotes Genéricos
 - [ ] Escrever testes unitários para cada pacote em `pkg/`
   - [ ] Testes para entidades/valores
-  - [ ] Testes para interfaces (mocks/fakes)
+  - [ ] Testes para interfaces (mocks/fakes em `mock/`)
   - [ ] Testes para adapters (usando mocks ou recursos locais)
   - [ ] Testes para workerpool
 

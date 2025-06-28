@@ -1,0 +1,58 @@
+package services
+
+import (
+	"demo-signserver/internal/repository/domain"
+	"fmt"
+	"os"
+	"testing"
+	"time"
+)
+
+func TestSignProfileService_CRUD(t *testing.T) {
+	os.Setenv("PROJECT_NAME", "signserver")
+	os.Setenv("ENVIRONMENT", "dev")
+	os.Setenv("SIGN_PROFILE_TABLE", "profile")
+
+	service := NewSignProfileService()
+
+	profile := &domain.SignProfile{
+		BaseEntity: domain.BaseEntity{
+			PK:        string(domain.SignerPositivo),
+			SK:        "001",
+			CreatedAt: time.Now().Unix(),
+			UpdatedAt: time.Now().Unix(),
+		},
+		Description: "Dispositivos Postivo perfil 001",
+		Signer:      domain.SignerPositivo,
+		Configs:     []domain.DeviceProfileConfig{{Key: "k", Value: "v"}},
+		Upload:      domain.TransferInfo{URL: "https://example.com/upload", Tries: 3, Interval: 5},
+		Download:    domain.TransferInfo{URL: "https://example.com/download", Tries: 3, Interval: 5},
+	}
+
+	err := service.CreateProfile(profile)
+	if err != nil {
+		t.Fatalf("Erro ao criar perfil: %v", err)
+	}
+
+	fetched, err := service.GetProfileByID(fmt.Sprintf("%s;%s", profile.PK, profile.SK))
+	if err != nil {
+		t.Fatalf("Erro ao buscar perfil: %v", err)
+	}
+	if fetched.Description != profile.Description {
+		t.Errorf("Nome esperado %s, obtido %s", profile.Description, fetched.Description)
+	}
+
+	profile.Description = "Unit Test Profile Updated"
+	err = service.UpdateProfile(profile)
+	if err != nil {
+		t.Fatalf("Erro ao atualizar perfil: %v", err)
+	}
+
+	fetched, err = service.GetProfileByID(fmt.Sprintf("%s;%s", profile.PK, profile.SK))
+	if err != nil {
+		t.Fatalf("Erro ao buscar perfil atualizado: %v", err)
+	}
+	if fetched.Description != "Unit Test Profile Updated" {
+		t.Errorf("Nome esperado 'Unit Test Profile Updated', obtido %s", fetched.Description)
+	}
+}

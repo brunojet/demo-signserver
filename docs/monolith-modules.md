@@ -6,7 +6,7 @@ Após uma avaliação do projeto, decidimos que a melhor abordagem seria manter 
 
 A estrutura monolítica será dividida em módulos, cada um responsável por uma parte específica do serviço. Os módulos identificados até agora são:
 
-- **Módulo de Intenção**: Responsável pela registro do pedido de assinatura, encaminhamento do perfil de assinatura e retorno da URL assinada para upload do aplicativo.
+- **Módulo de Intenção**: Responsável pelo registro do pedido de assinatura, encaminhamento do perfil de assinatura e retorno da URL assinada para upload do aplicativo.
 - **Módulo de Assinatura**: Responsável pelo processo de assinatura de APKs, desde o recebimento do evento do S3 até o download do APK para processamento da assinatura e posterior upload do APK assinado de volta ao S3.
 - **Módulo de Notificações**: Responsável pelo envio de notificações aos usuários, como webhooks ou mensagens de status via SNS (Simple Notification Service).
 
@@ -14,7 +14,12 @@ Cada módulo será desenvolvido de forma independente, mas todos estarão integr
 
 ## Estrutura do Projeto
 
-Abaixo está um exemplo de como pode ser organizada a estrutura de diretórios e arquivos para um projeto monolítico em Go seguindo o padrão DDD (Domain-Driven Design), considerando que os itens compartilhados (modelos e repositórios) ficam em `pkg/` para permitir reutilização futura por outros projetos:
+A estrutura de diretórios foi atualizada para refletir a separação entre código de produção e mocks de teste, seguindo o padrão:
+
+- Código de produção: `pkg/repository/services`, `pkg/storage/services`, etc.
+- Mocks de teste: `pkg/repository/mock`, `pkg/storage/mock`, etc.
+
+Exemplo de estrutura:
 
 ```text
 /demo-signserver
@@ -22,61 +27,18 @@ Abaixo está um exemplo de como pode ser organizada a estrutura de diretórios e
 │   └── main.go
 ├── internal/                   # Código interno da aplicação (não exportado)
 │   ├── app/                    # Orquestração de fluxos, channels, etc.
-│   │   ├── orchestrator.go         # Coordena o fluxo principal do sistema
-│   │   ├── upload_worker.go        # Worker dedicado ao upload do APK assinado
-│   │   ├── download_worker.go      # Worker dedicado ao download do APK do S3 para disco
-│   │   ├── event.go                # Definição de eventos internos (structs para assinatura, upload, notificação)
-│   │   └── channels.go             # Definição e inicialização dos canais usados entre os workers
 │   ├── intent/                 # Contexto de Intenção
-│   │   ├── application/
-│   │   │   └── intent_service.go   # Casos de uso: criar intent, gerar URL, atualizar status
-│   │   └── interfaces/
-│   │       └── http_handler.go     # Handler HTTP para pedidos de intenção
 │   ├── signing/                # Contexto de Assinatura
-│   │   ├── application/
-│   │   │   └── signing_service.go   # Lógica de assinatura, integração com workerpool
-│   │   ├── adapters/                # Adaptadores para diferentes assinadores/fabricantes
-│   │   │   ├── signing_adapter_positivo.go   # Integração com assinador Positivo
-│   │   │   ├── signing_adapter_fabricanteX.go# Integração com outro fabricante
-│   │   │   └── ...                          # Outros adaptadores conforme necessário
-│   │   └── interfaces/
-│   │       ├── worker_handler.go        # Handler para eventos do workerpool
-│   │       └── signing_adapter_interface.go # Interface que define o contrato dos adaptadores de assinadores
-│   └── repository/                 # Repositórios compartilhados
-│       ├── domain/                 # Interfaces dos repositórios (contratos)
-│       │   ├── device_profile.go
-│       │   └── intent.go
-│       └── service/                # Interfaces/contratos de serviços auxiliares
-│           ├── device_profile.go
-│           └── intent.go
+│   └── repository/             # Interfaces de domínio (contratos)
+│       └── domain/             # Interfaces dos repositórios
 ├── pkg/                        # Código reutilizável/exportável por outros projetos
-│   ├── repository/                 # Repositórios compartilhados
-│   │   ├── service/                # Interface/contrato para operações de repositorio
-│   │   │   └── repository.go
-│   │   ├── adapters/               # Implementações concretas dos repositórios
-│   │   |   └── dynamodb.go         # Adapter para DynamoDB (pode haver outros, ex: postgres.go)
-│   |   └── interfaces/             # Interfaces públicas do serviço
-│   |       └── adapters.go
-│   ├── storage/                    # Abstração para acesso a storages
-│   │   ├── service/                # Interface/contrato para operações de storage
-│   │   │   └── storage.go
-│   │   ├── adapters/               # Implementações concretas dos storages
-│   │   |    └── s3.go               # Integração com AWS S3
-│   |   └── interfaces/             # Interfaces públicas do serviço
-│   |       └── adapters.go
-│   ├── workerpool/                 # Implementação genérica do pool de workers
-│   │   └── service/
-│   │       └── workerpool.go
-│   └── notification/               # Serviço de notificação genérico e reutilizável
-│       ├── domain/                 # Entidades/valores de notificação genéricos
-│       │   └── notification.go
-│       ├── service/                # Interface/contrato para operações de notificação
-│       │   └── notification.go
-│       ├── adapters/               # Adapters para SNS, webhooks, etc.
-│       │   └── webhook.go
-│       ├── interfaces/             # Interfaces públicas do serviço
-│       │   └── adapters.go
-│       └── notification_service.go # Serviço que recebe objeto abstrato e parâmetros de envio
+│   ├── repository/
+│   │   ├── services/           # Implementações concretas dos repositórios (DynamoDB, etc.)
+│   │   ├── mock/               # Mocks para testes (ex: MockDynamoDBClient)
+│   ├── storage/
+│   │   ├── services/           # Serviços de storage (S3, STS, etc.)
+│   │   ├── mock/               # Mocks de storage para testes
+│   └── ...
 ├── api/                        # Definições de APIs (OpenAPI/Swagger, protos, etc)
 ├── configs/                    # Arquivos de configuração
 ├── scripts/                    # Scripts auxiliares
@@ -86,13 +48,11 @@ Abaixo está um exemplo de como pode ser organizada a estrutura de diretórios e
 ```
 
 - O diretório `pkg/` contém código que pode ser importado por outros projetos Go, facilitando a reutilização caso o monólito evolua para microsserviços ou bibliotecas compartilhadas.
-- As entidades de domínio compartilhadas entre dois ou mais módulos ficam em `pkg/shared/domain/`, deixando claro que são centrais e reutilizáveis no projeto.
-- Os repositórios compartilhados ficam em `pkg/repository/`, separados em `domain/` (interfaces/contratos) e `adapters/` (implementações concretas, como DynamoDB, Postgres, etc). Isso garante desacoplamento e facilita testes e manutenção.
-- Os módulos de domínio (`intent`, `signing`, `notification`) podem importar esses pacotes normalmente.
+- Os mocks de infraestrutura (ex: MockDynamoDBClient, MockPresignClient) ficam em `pkg/repository/mock` e `pkg/storage/mock`, garantindo que apenas código de teste dependa deles.
+- O domínio e as interfaces de repositório continuam em `internal/repository/domain`, mantendo o core do domínio desacoplado da infraestrutura.
 - O diretório `internal/app/` centraliza a orquestração de fluxos que envolvem múltiplos contextos, como workers, channels e coordenação entre assinatura e notificação.
-- O arquivo `orchestrator.go` pode conter a lógica que utiliza intent, signing e notification, mantendo cada domínio isolado e a lógica de coordenação separada.
 
-Essa abordagem prepara o projeto para uma possível evolução futura, mantendo a estrutura alinhada ao DDD e à filosofia Go de reutilização de código.
+Essa abordagem prepara o projeto para uma possível evolução futura, mantendo a estrutura alinhada ao DDD, à filosofia Go de reutilização de código e às melhores práticas de isolamento de testes.
 
 ## Fluxo de trabalho
 

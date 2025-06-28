@@ -15,7 +15,7 @@ resource "aws_dynamodb_table" "this" {
   write_capacity = var.billing_mode == "PROVISIONED" ? var.write_capacity : null
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 
