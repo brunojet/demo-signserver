@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
@@ -30,12 +29,6 @@ func getTestDynamoDBClient(t *testing.T) *dynamodb.Client {
 		t.Fatalf("Erro ao carregar config: %v", err)
 	}
 	return dynamodb.NewFromConfig(cfg)
-}
-
-type customTestResolver string
-
-func (r customTestResolver) ResolveEndpoint(service, region string) (aws.Endpoint, error) {
-	return aws.Endpoint{URL: string(r), SigningRegion: "us-east-1"}, nil
 }
 
 func TestTableExists_Create_Delete(t *testing.T) {

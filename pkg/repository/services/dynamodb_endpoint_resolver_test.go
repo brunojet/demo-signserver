@@ -4,9 +4,16 @@ import (
 	"context"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
+
+type customTestResolver string
+
+func (r customTestResolver) ResolveEndpoint(service, region string) (aws.Endpoint, error) {
+	return aws.Endpoint{URL: string(r), SigningRegion: "us-east-1"}, nil
+}
 
 func getTestDynamoDBClientAndResolver(t *testing.T, table string) (*dynamodb.Client, *DynamoDBEndpointResolver) {
 	endpoint := "http://localhost:8001"

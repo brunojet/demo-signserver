@@ -2,45 +2,99 @@ package db_services
 
 import (
 	"context"
+	"os"
 	"testing"
 
-	db_mock "demo-signserver/pkg/repository/mock"
-
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDynamoDBService_PutItem(t *testing.T) {
-	mock := &db_mock.MockDynamoDBClient{
-		PutItemFunc: func(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
-			assert.Equal(t, "TestTable", *params.TableName)
-			assert.NotNil(t, params.Item["ID"])
-			return &dynamodb.PutItemOutput{}, nil
-		},
+var (
+	dynamoClient *dynamodb.Client
+	tableName    = "TestTable"
+	endpoint     = "http://localhost:8001"
+)
+
+func init() {
+	os.Setenv("DYNAMODB_ENDPOINT", endpoint)
+	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
+	os.Setenv("DELETE_TABLE", "true")
+}
+
+func TestMain(m *testing.M) {
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithEndpointResolver(
+			customTestResolver(endpoint),
+		),
+	)
+	if err != nil {
+		panic(err)
 	}
-	service := &DynamoDBService{Client: mock, Table: "TestTable"}
-	item := map[string]types.AttributeValue{"ID": &types.AttributeValueMemberS{Value: "123"}}
+	dynamoClient = dynamodb.NewFromConfig(cfg)
+
+	// Cria a tabela antes dos testes
+	err = CreateTable(context.TODO(), dynamoClient, tableName, "")
+	if err != nil {
+		panic(err)
+	}
+
+	code := m.Run()
+
+	// Deleta a tabela após os testes
+	_ = DeleteTable(context.TODO(), dynamoClient, tableName)
+	os.Exit(code)
+}
+
+func TestDynamoDBService_CreateItem(t *testing.T) {
+	const pk_value = "001"
+	type Item struct {
+		Name string `dynamodbav:"name"`
+	}
+	service := &DynamoDBService{Client: dynamoClient, Table: tableName, PKKey: "name", SKKey: ""}
+	item := Item{Name: pk_value}
 	err := service.CreateItem(context.TODO(), item)
 	assert.NoError(t, err)
 }
 
 func TestDynamoDBService_GetItem(t *testing.T) {
-	mock := &db_mock.MockDynamoDBClient{
-		GetItemFunc: func(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error) {
-			assert.Equal(t, "TestTable", *params.TableName)
-			assert.NotNil(t, params.Key["pk"])
-			// Simula item retornado com pk (minúsculo, para bater com a tag do struct)
-			return &dynamodb.GetItemOutput{
-				Item: map[string]types.AttributeValue{"pk": &types.AttributeValueMemberS{Value: "123"}},
-			}, nil
-		},
-	}
-	service := &DynamoDBService{Client: mock, Table: "TestTable", PKKey: "pk", SKKey: ""}
-	var out struct {
+	const pk_value = "123"
+	type Item struct {
 		PK string `dynamodbav:"pk"`
 	}
-	err := service.GetItem(context.TODO(), "123", &out)
+	service := &DynamoDBService{Client: dynamoClient, Table: tableName, PKKey: "pk", SKKey: ""}
+	item := Item{PK: pk_value}
+	_ = service.CreateItem(context.TODO(), item)
+	var out Item
+	err := service.GetItem(context.TODO(), pk_value, &out)
 	assert.NoError(t, err)
-	assert.Equal(t, "123", out.PK)
+	assert.Equal(t, pk_value, out.PK)
+}
+
+func TestDynamoDBService_UpdateItem(t *testing.T) {
+	const pk_value = "456"
+	type Item struct {
+		PK   string `dynamodbav:"pk"`
+		Name string `dynamodbav:"name"`
+	}
+
+	service := &DynamoDBService{Client: dynamoClient, Table: tableName, PKKey: "pk", SKKey: ""}
+	// Cria item inicial
+	item := Item{PK: pk_value, Name: "original"}
+	err := service.CreateItem(context.TODO(), item)
+	assert.NoError(t, err)
+
+	// Atualiza campo Name
+	update := Item{Name: "updated"}
+	err = service.UpdateItem(context.TODO(), pk_value, update)
+	assert.NoError(t, err)
+
+	// Busca e valida
+	var out Item
+	err = service.GetItem(context.TODO(), pk_value, &out)
+	assert.NoError(t, err)
+	assert.Equal(t, pk_value, out.PK)
+	assert.Equal(t, "updated", out.Name)
 }

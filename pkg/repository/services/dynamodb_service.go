@@ -12,15 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-// DynamoDBAPI define interface para mocks do DynamoDB Client.
-type DynamoDBAPI interface {
-	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
-	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
-}
-
 // DynamoDBService encapsula operações com o DynamoDB.
 type DynamoDBService struct {
-	Client DynamoDBAPI
+	Client *dynamodb.Client
 	Table  string
 	PKKey  string
 	SKKey  string
@@ -108,7 +102,7 @@ func (s *DynamoDBService) updateItemInternal(ctx context.Context, ID string, ite
 		return err
 	}
 
-	_, err = s.Client.(*dynamodb.Client).UpdateItem(ctx, &dynamodb.UpdateItemInput{
+	_, err = s.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName:                 &s.Table,
 		Key:                       MakeKeyByID(ID, s.PKKey, s.SKKey),
 		UpdateExpression:          &updateExpr,
