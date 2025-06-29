@@ -12,7 +12,7 @@ var (
 )
 
 func getTestDynamoDBClient(t *testing.T) *dynamodb.Client {
-	client, _ := getTestDynamoDBClientAndResolver(t, testTableName)
+	client, _, _ := getTestDynamoDBClientAndResolver(t, testTableName)
 
 	return client
 }

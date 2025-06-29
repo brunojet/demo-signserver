@@ -22,7 +22,7 @@ func init() {
 func TestMain(m *testing.M) {
 	// Use getTestDynamoDBClientAndResolver directly since *testing.T is not available in TestMain
 	t := &testing.T{}
-	dynamoClient, _ = getTestDynamoDBClientAndResolver(t, tableNameService)
+	dynamoClient, _, _ = getTestDynamoDBClientAndResolver(t, tableNameService)
 
 	// Cria a tabela antes dos testes
 	err := CreateTable(context.TODO(), dynamoClient, tableNameService, "")
