@@ -7,11 +7,17 @@ import (
 	"testing"
 )
 
-func TestSignProfileService_CRUD(t *testing.T) {
+func init() {
 	os.Setenv("PROJECT_NAME", "signserver")
 	os.Setenv("ENVIRONMENT", "dev")
 	os.Setenv("SIGN_PROFILE_TABLE", "profile")
+	os.Setenv("DYNAMODB_ENDPOINT", "http://localhost:8001")
+	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
+	os.Setenv("DELETE_TABLE", "true")
+}
 
+func TestSignProfileService_CRUD(t *testing.T) {
 	service := NewSignProfileService()
 
 	desc := "Dispositivos Postivo perfil 001"
