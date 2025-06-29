@@ -68,6 +68,7 @@ type TransferInfo struct {
 type SignProfile struct {
 	ID          string                `json:"id,omitempty"`
 	Signer      Signer                `dynamodbav:"signer"`
+	ProfileId   string                `dynamodbav:"profile_id"`
 	Description string                `dynamodbav:"description"`
 	Configs     []DeviceProfileConfig `dynamodbav:"configs"`
 	Upload      TransferInfo          `dynamodbav:"upload"`

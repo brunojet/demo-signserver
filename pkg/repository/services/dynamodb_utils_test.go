@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 type testStructWithId struct {
@@ -261,5 +263,71 @@ func TestSetIDFromPKSK_PKSK_Map(t *testing.T) {
 	SetIDFromPKSK(&m)
 	if m["ID"] != "pkval;skval" {
 		t.Errorf("ID not set correctly in map for PK and SK: got %v", m["ID"])
+	}
+}
+
+func TestAddPKSKToItem_OnlyPK(t *testing.T) {
+	item := map[string]types.AttributeValue{
+		"User": &types.AttributeValueMemberS{Value: "user1"},
+	}
+	AddPKSKToItem(item, "User", "")
+	if v, ok := item["PK"].(*types.AttributeValueMemberS); !ok || v.Value != "user1" {
+		t.Errorf("PK not set correctly, got %v", item["PK"])
+	}
+	if _, ok := item["SK"]; ok {
+		t.Errorf("SK should not be set when SKKey is empty")
+	}
+}
+
+func TestAddPKSKToItem_PKSK(t *testing.T) {
+	item := map[string]types.AttributeValue{
+		"User": &types.AttributeValueMemberS{Value: "user1"},
+		"Type": &types.AttributeValueMemberS{Value: "admin"},
+	}
+	AddPKSKToItem(item, "User", "Type")
+	if v, ok := item["PK"].(*types.AttributeValueMemberS); !ok || v.Value != "user1" {
+		t.Errorf("PK not set correctly, got %v", item["PK"])
+	}
+	if v, ok := item["SK"].(*types.AttributeValueMemberS); !ok || v.Value != "admin" {
+		t.Errorf("SK not set correctly, got %v", item["SK"])
+	}
+}
+
+func TestAddPKSKToItem_NoPKKey(t *testing.T) {
+	item := map[string]types.AttributeValue{}
+	AddPKSKToItem(item, "", "Type")
+	if v, ok := item["PK"].(*types.AttributeValueMemberS); !ok || v.Value == "" {
+		t.Errorf("PK should be a generated UUID, got %v", item["PK"])
+	}
+}
+
+func TestAddIDToItem_OnlyPK(t *testing.T) {
+	item := map[string]types.AttributeValue{
+		"PK": &types.AttributeValueMemberS{Value: "user1"},
+	}
+	AddIDToItem(item, "")
+	if v, ok := item["ID"].(*types.AttributeValueMemberS); !ok || v.Value != "user1" {
+		t.Errorf("ID not set correctly, got %v", item["ID"])
+	}
+}
+
+func TestAddIDToItem_PKSK(t *testing.T) {
+	item := map[string]types.AttributeValue{
+		"PK": &types.AttributeValueMemberS{Value: "user1"},
+		"SK": &types.AttributeValueMemberS{Value: "admin"},
+	}
+	AddIDToItem(item, "SK")
+	if v, ok := item["ID"].(*types.AttributeValueMemberS); !ok || v.Value != "user1#admin" {
+		t.Errorf("ID not set correctly, got %v", item["ID"])
+	}
+}
+
+func TestAddIDToItem_NoPK(t *testing.T) {
+	item := map[string]types.AttributeValue{
+		"SK": &types.AttributeValueMemberS{Value: "admin"},
+	}
+	AddIDToItem(item, "SK")
+	if _, ok := item["ID"]; ok {
+		t.Errorf("ID should not be set when PK is missing")
 	}
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/google/uuid"
 )
 
 // MarshalItem converte struct Go para map[string]types.AttributeValue (DynamoDB)
@@ -154,4 +155,46 @@ func SetTimestamps(obj interface{}, isCreate bool) {
 		setField(v, "CreatedAt", now)
 	}
 	setField(v, "UpdatedAt", now)
+}
+
+// getStringAttrValue extrai o valor string de um types.AttributeValueMemberS, ou retorna "" se não for string
+func GetStringAttrValue(attr types.AttributeValue) string {
+	if v, ok := attr.(*types.AttributeValueMemberS); ok {
+		return v.Value
+	}
+	return ""
+}
+
+// AddPKSKToItem adiciona PK e SK ao item conforme as regras de negócio.
+func AddPKSKToItem(item map[string]types.AttributeValue, pkKey, skKey string) {
+	pkVal, pkOk := item[pkKey]
+
+	if pkKey == "" || !pkOk {
+		item["PK"] = &types.AttributeValueMemberS{Value: uuid.NewString()}
+	} else {
+		item["PK"] = &types.AttributeValueMemberS{Value: GetStringAttrValue(pkVal)}
+	}
+
+	if skKey != "" {
+		skVal := item[skKey]
+		item["SK"] = &types.AttributeValueMemberS{Value: GetStringAttrValue(skVal)}
+	}
+}
+
+// AddIDToItem preenche o campo ID no item a partir de PK e SK
+func AddIDToItem(item map[string]types.AttributeValue, skKey string) {
+	pkStr := GetStringAttrValue(item["PK"])
+	if pkStr == "" {
+		return
+	}
+	id := pkStr
+
+	if skKey != "" {
+		skStr := GetStringAttrValue(item["SK"])
+		if skStr != "" {
+			id += "#" + skStr
+		}
+	}
+
+	item["ID"] = &types.AttributeValueMemberS{Value: id}
 }

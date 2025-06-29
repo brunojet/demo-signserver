@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 )
 
 func TestSignProfileService_CRUD(t *testing.T) {
@@ -16,14 +15,9 @@ func TestSignProfileService_CRUD(t *testing.T) {
 	service := NewSignProfileService()
 
 	profile := &domain.SignProfile{
-		BaseEntity: domain.BaseEntity{
-			PK:        string(domain.SignerPositivo),
-			SK:        "001",
-			CreatedAt: time.Now().Unix(),
-			UpdatedAt: time.Now().Unix(),
-		},
 		Description: "Dispositivos Postivo perfil 001",
 		Signer:      domain.SignerPositivo,
+		ProfileId:   "001",
 		Configs:     []domain.DeviceProfileConfig{{Key: "k", Value: "v"}},
 		Upload:      domain.TransferInfo{URL: "https://example.com/upload", Tries: 3, Interval: 5},
 		Download:    domain.TransferInfo{URL: "https://example.com/download", Tries: 3, Interval: 5},
@@ -34,7 +28,7 @@ func TestSignProfileService_CRUD(t *testing.T) {
 		t.Fatalf("Erro ao criar perfil: %v", err)
 	}
 
-	fetched, err := service.GetProfileByID(fmt.Sprintf("%s;%s", profile.PK, profile.SK))
+	fetched, err := service.GetProfileByID(fmt.Sprintf("%s;%s", profile.Signer, profile.ProfileId))
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil: %v", err)
 	}
@@ -48,7 +42,7 @@ func TestSignProfileService_CRUD(t *testing.T) {
 		t.Fatalf("Erro ao atualizar perfil: %v", err)
 	}
 
-	fetched, err = service.GetProfileByID(fmt.Sprintf("%s;%s", profile.PK, profile.SK))
+	fetched, err = service.GetProfileByID(fmt.Sprintf("%s;%s", profile.Signer, profile.ProfileId))
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil atualizado: %v", err)
 	}

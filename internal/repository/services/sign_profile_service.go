@@ -36,13 +36,48 @@ func NewSignProfileService() *SignProfileService {
 	return &SignProfileService{Dynamo: dynamo}
 }
 
-func (s *SignProfileService) CreateProfile(profile *domain.SignProfile) error {
-	db_services.SetPKSKFromID(profile)
-	db_services.SetTimestamps(profile, true)
-	item, err := db_services.MarshalItem(profile)
+func setProfileId(profile *domain.SignProfile) error {
+	if profile.Signer == "" || profile.ProfileId == "" {
+		return fmt.Errorf("invalid Signer and ProfileID")
+	}
+
+	profileID := fmt.Sprintf("%s;%s", string(profile.Signer), profile.ProfileId)
+
+	if profile.ID != "" && profile.ID != profileID {
+		return fmt.Errorf("ProfileID cannot be changed")
+	}
+
+	profile.ID = profileID
+
+	return nil
+}
+
+func (s *SignProfileService) setPKSK(profile *domain.SignProfile) error {
+	err := setProfileId(profile)
+
 	if err != nil {
 		return err
 	}
+
+	db_services.SetPKSKFromID(profile)
+
+	return err
+}
+
+func (s *SignProfileService) CreateProfile(profile *domain.SignProfile) error {
+	err := s.setPKSK(profile)
+
+	if err != nil {
+		return err
+	}
+
+	db_services.SetTimestamps(profile, true)
+	item, err := db_services.MarshalItem(profile)
+
+	if err != nil {
+		return err
+	}
+
 	return s.Dynamo.PutItem(context.TODO(), item)
 }
 
@@ -57,12 +92,18 @@ func (s *SignProfileService) GetProfileByID(id string) (*domain.SignProfile, err
 	if err != nil {
 		return nil, err
 	}
-	db_services.SetIDFromPKSK(&profile)
+	setProfileId(&profile)
+
 	return &profile, nil
 }
 
 func (s *SignProfileService) UpdateProfile(profile *domain.SignProfile) error {
-	db_services.SetPKSKFromID(profile)
+	err := s.setPKSK(profile)
+
+	if err != nil {
+		return err
+	}
+
 	db_services.SetTimestamps(profile, false)
 	item, err := db_services.MarshalItem(profile)
 	if err != nil {
