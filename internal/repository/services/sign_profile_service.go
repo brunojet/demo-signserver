@@ -12,6 +12,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const SIGNER_KEY = "signer"
+const PROFILE_ID_KEY = "profile_id"
+
 func init() {
 	// Carrega o arquivo .env da pasta config
 	err := godotenv.Load("config/.env")
@@ -29,7 +32,7 @@ func NewSignProfileService() *SignProfileService {
 	env := os.Getenv("ENVIRONMENT")
 	table_name := os.Getenv("SIGN_PROFILE_TABLE")
 	table := fmt.Sprintf("%s-%s-%s", project, env, table_name)
-	dynamo, err := db_services.NewDynamoDBService(table, "signer", "profile_id")
+	dynamo, err := db_services.NewDynamoDBService(table, SIGNER_KEY, PROFILE_ID_KEY)
 	if err != nil {
 		log.Fatalf("Erro ao inicializar DynamoDBService: %v", err)
 	}
