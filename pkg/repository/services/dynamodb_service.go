@@ -19,10 +19,18 @@ type DynamoDBService struct {
 
 // NewDynamoDBService padrão, usa config.LoadDefaultConfig
 func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBService, error) {
-	client, err := NewDynamoDBClient(context.TODO(), table, pkKey, skKey)
+	client, resolver, err := NewDynamoDBClient(context.TODO(), table)
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Se for endpoint customizado, garante que a tabela existe
+	if resolver.EndpointURL != "" {
+		err = resolver.EnsureTableExists(context.TODO(), client, skKey)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &DynamoDBService{Client: client, Table: table, PKKey: pkKey, SKKey: skKey}, nil
@@ -30,30 +38,17 @@ func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBServ
 
 type ctxKey string
 
-const (
-	CtxNoOverwriteKey ctxKey = "dynamodb_no_overwrite"
-)
-
 // PutItem insere um item na tabela DynamoDB.
 func (s *DynamoDBService) putItemInternal(ctx context.Context, item map[string]types.AttributeValue) error {
 	AddPKSKToItem(item, s.PKKey, s.SKKey)
 	SetTimestamps(item, true)
 
-	var condExpr *string
-	var exprAttrNames map[string]string
-
-	if v := ctx.Value(CtxNoOverwriteKey); v != nil {
-		if noOverwrite, ok := v.(bool); ok && noOverwrite {
-			cond, names := BuildNoOverwriteCondition(s.PKKey, s.SKKey)
-			condExpr = &cond
-			exprAttrNames = names
-		}
-	}
+	condExpr, exprAttrNames := BuildNoOverwriteCondition(s.PKKey, s.SKKey)
 
 	_, err := s.Client.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName:                &s.Table,
 		Item:                     item,
-		ConditionExpression:      condExpr,
+		ConditionExpression:      &condExpr,
 		ExpressionAttributeNames: exprAttrNames,
 	})
 	if err != nil {
@@ -71,16 +66,20 @@ func (s *DynamoDBService) updateItemInternal(ctx context.Context, ID string, ite
 		return err
 	}
 
+	condExpr := BuildUpdateCondition(s.PKKey, s.SKKey)
+
 	_, err = s.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName:                 &s.Table,
 		Key:                       MakeKeyByID(ID, s.PKKey, s.SKKey),
 		UpdateExpression:          &updateExpr,
 		ExpressionAttributeValues: exprAttrValues,
 		ExpressionAttributeNames:  exprAttrNames,
+		ConditionExpression:       &condExpr,
 	})
 	if err != nil {
 		fmt.Printf("[DynamoDBService] Erro ao atualizar item com ID %s na tabela %s: %v\n", ID, s.Table, err)
 	}
+
 	return err
 }
 
@@ -93,6 +92,8 @@ func (s *DynamoDBService) GetItem(ctx context.Context, ID string, out interface{
 	if err != nil {
 		fmt.Printf("[DynamoDBService] Erro ao buscar item com ID %s na tabela %s: %v\n", ID, s.Table, err)
 		return err
+	} else if len(resp.Item) == 0 {
+		return fmt.Errorf("item with ID %s not found in table %s", ID, s.Table)
 	}
 	AddIDToItem(resp.Item, s.SKKey)
 	return UnmarshalItem(resp.Item, out)
@@ -100,7 +101,6 @@ func (s *DynamoDBService) GetItem(ctx context.Context, ID string, out interface{
 
 // CreateItem insere um item, sempre evitando sobrescrita (ConditionExpression).
 func (s *DynamoDBService) CreateItem(ctx context.Context, obj interface{}) error {
-	ctx = context.WithValue(ctx, CtxNoOverwriteKey, true)
 	item, err := MarshalItem(obj)
 	if err != nil {
 		return err
@@ -111,8 +111,10 @@ func (s *DynamoDBService) CreateItem(ctx context.Context, obj interface{}) error
 // UpdateItem atualiza apenas os campos não-chave do objeto informado (update parcial).
 func (s *DynamoDBService) UpdateItem(ctx context.Context, ID string, obj interface{}) error {
 	item, err := attributevalue.MarshalMap(obj)
+
 	if err != nil {
 		return err
 	}
+
 	return s.updateItemInternal(ctx, ID, item)
 }

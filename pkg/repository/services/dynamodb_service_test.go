@@ -16,6 +16,7 @@ var (
 
 func init() {
 	os.Setenv("DELETE_TABLE", "true")
+	os.Setenv("DYNAMODB_ENDPOINT", "http://localhost:8001")
 }
 
 func TestMain(m *testing.M) {
@@ -61,6 +62,19 @@ func TestDynamoDBService_GetItem(t *testing.T) {
 	assert.Equal(t, pk_value, out.PK)
 }
 
+func TestDynamoDBService_GetItem_Error(t *testing.T) {
+	const pk_value = "1234"
+	type Item struct {
+		PK string `dynamodbav:"pk"`
+	}
+	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "pk", SKKey: ""}
+	item := Item{PK: pk_value}
+	_ = service.CreateItem(context.TODO(), item)
+	var out Item
+	err := service.GetItem(context.TODO(), pk_value+"1", &out)
+	assert.Error(t, err)
+}
+
 func TestDynamoDBService_UpdateItem(t *testing.T) {
 	const pk_value = "456"
 	type Item struct {
@@ -85,4 +99,32 @@ func TestDynamoDBService_UpdateItem(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, pk_value, out.PK)
 	assert.Equal(t, "updated", out.Name)
+}
+
+func TestDynamoDBService_UpdateItem_Error(t *testing.T) {
+	const pk_value = "4567"
+	type Item struct {
+		PK   string `dynamodbav:"pk"`
+		Name string `dynamodbav:"name"`
+	}
+
+	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "pk", SKKey: ""}
+	// Cria item inicial
+	item := Item{PK: pk_value, Name: "original"}
+	err := service.CreateItem(context.TODO(), item)
+	assert.NoError(t, err)
+
+	// Atualiza campo Name
+	update := Item{Name: "updated"}
+	err = service.UpdateItem(context.TODO(), pk_value+"1", update)
+	assert.Error(t, err)
+}
+
+func TestNewDynamoDBService_Coverage(t *testing.T) {
+	svc, err := NewDynamoDBService(tableNameService, "pk", "sk")
+	assert.NoError(t, err)
+	assert.NotNil(t, svc)
+	assert.Equal(t, tableNameService, svc.Table)
+	assert.Equal(t, "pk", svc.PKKey)
+	assert.Equal(t, "sk", svc.SKKey)
 }

@@ -170,3 +170,12 @@ func BuildNoOverwriteCondition(pkKey, skKey string) (condExpr string, exprAttrNa
 	}
 	return cond, exprAttrNames
 }
+
+// BuildUpdateCondition retorna uma ConditionExpression para garantir que o item existe antes do update.
+func BuildUpdateCondition(pkKey, skKey string) string {
+	cond := fmt.Sprintf("attribute_exists(%s)", pkKey)
+	if skKey != "" {
+		cond += fmt.Sprintf(" AND attribute_exists(%s)", skKey)
+	}
+	return cond
+}
