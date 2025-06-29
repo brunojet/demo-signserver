@@ -89,11 +89,11 @@ func (s *DynamoDBService) GetItem(ctx context.Context, ID string, out interface{
 		TableName: &s.Table,
 		Key:       MakeKeyByID(ID, s.PKKey, s.SKKey),
 	})
-	if err != nil {
-		fmt.Printf("[DynamoDBService] Erro ao buscar item com ID %s na tabela %s: %v\n", ID, s.Table, err)
+	if err != nil || len(resp.Item) == 0 {
+		if err == nil {
+			err = fmt.Errorf("[DynamoDBService] Erro ao buscar item com ID %s na tabela %s", ID, s.Table)
+		}
 		return err
-	} else if len(resp.Item) == 0 {
-		return fmt.Errorf("item with ID %s not found in table %s", ID, s.Table)
 	}
 	AddIDToItem(resp.Item, s.SKKey)
 	return UnmarshalItem(resp.Item, out)

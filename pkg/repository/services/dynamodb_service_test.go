@@ -48,6 +48,21 @@ func TestDynamoDBService_CreateItem(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestDynamoDBService_CreateItem_Error(t *testing.T) {
+	const pk_value = "0011"
+	type Item struct {
+		Name string `dynamodbav:"name"`
+	}
+	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "name", SKKey: ""}
+	item := Item{Name: pk_value}
+	err := service.CreateItem(context.TODO(), item)
+	assert.NoError(t, err)
+
+	err = service.CreateItem(context.TODO(), item)
+	assert.Error(t, err)
+
+}
+
 func TestDynamoDBService_GetItem(t *testing.T) {
 	const pk_value = "123"
 	type Item struct {
