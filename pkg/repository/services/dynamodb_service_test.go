@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	dynamoClient *dynamodb.Client
-	tableName    = "TestTableService"
+	dynamoClient     *dynamodb.Client
+	tableNameService = "TableService"
 )
 
 func init() {
@@ -21,10 +21,10 @@ func init() {
 func TestMain(m *testing.M) {
 	// Use getTestDynamoDBClientAndResolver directly since *testing.T is not available in TestMain
 	t := &testing.T{}
-	dynamoClient, _ = getTestDynamoDBClientAndResolver(t, testTableName)
+	dynamoClient, _ = getTestDynamoDBClientAndResolver(t, tableNameService)
 
 	// Cria a tabela antes dos testes
-	err := CreateTable(context.TODO(), dynamoClient, tableName, "")
+	err := CreateTable(context.TODO(), dynamoClient, tableNameService, "")
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	// Deleta a tabela após os testes
-	_ = DeleteTable(context.TODO(), dynamoClient, tableName)
+	_ = DeleteTable(context.TODO(), dynamoClient, tableNameService)
 	os.Exit(code)
 }
 
@@ -41,7 +41,7 @@ func TestDynamoDBService_CreateItem(t *testing.T) {
 	type Item struct {
 		Name string `dynamodbav:"name"`
 	}
-	service := &DynamoDBService{Client: dynamoClient, Table: tableName, PKKey: "name", SKKey: ""}
+	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "name", SKKey: ""}
 	item := Item{Name: pk_value}
 	err := service.CreateItem(context.TODO(), item)
 	assert.NoError(t, err)
@@ -52,7 +52,7 @@ func TestDynamoDBService_GetItem(t *testing.T) {
 	type Item struct {
 		PK string `dynamodbav:"pk"`
 	}
-	service := &DynamoDBService{Client: dynamoClient, Table: tableName, PKKey: "pk", SKKey: ""}
+	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "pk", SKKey: ""}
 	item := Item{PK: pk_value}
 	_ = service.CreateItem(context.TODO(), item)
 	var out Item
@@ -68,7 +68,7 @@ func TestDynamoDBService_UpdateItem(t *testing.T) {
 		Name string `dynamodbav:"name"`
 	}
 
-	service := &DynamoDBService{Client: dynamoClient, Table: tableName, PKKey: "pk", SKKey: ""}
+	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "pk", SKKey: ""}
 	// Cria item inicial
 	item := Item{PK: pk_value, Name: "original"}
 	err := service.CreateItem(context.TODO(), item)
