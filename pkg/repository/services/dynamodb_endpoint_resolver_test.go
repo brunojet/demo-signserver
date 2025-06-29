@@ -46,3 +46,29 @@ func TestDynamoDBEndpointResolver_EnsureTableExists(t *testing.T) {
 		t.Fatalf("Erro ao garantir tabela já existente: %v", err)
 	}
 }
+
+func TestDynamoDBEndpointResolver_EnsureTableExists_NoClient(t *testing.T) {
+	_, resolver := getTestDynamoDBClientAndResolver(t, testResolverTableName)
+	ctx := context.TODO()
+
+	os.Setenv("DELETE_TABLE", "true") // Força deleção da tabela
+
+	// Tenta criar de novo (não deve dar erro)
+	err := resolver.EnsureTableExists(ctx, nil, "sk")
+	if err == nil {
+		t.Fatalf("DynamoDB client erro esperado")
+	}
+}
+
+func TestDynamoDBEndpointResolver_EnsureTableExists_NoClient_2(t *testing.T) {
+	_, resolver := getTestDynamoDBClientAndResolver(t, testResolverTableName)
+	ctx := context.TODO()
+
+	os.Setenv("DELETE_TABLE", "") // Força deleção da tabela
+
+	// Tenta criar de novo (não deve dar erro)
+	err := resolver.EnsureTableExists(ctx, nil, "sk")
+	if err == nil {
+		t.Fatalf("DynamoDB client erro esperado")
+	}
+}

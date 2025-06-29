@@ -3,10 +3,7 @@ package db_services
 import (
 	"context"
 	"fmt"
-	"syscall"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
@@ -20,49 +17,21 @@ type DynamoDBService struct {
 	SKKey  string
 }
 
-// NewDynamoDBServiceWithConfigLoader permite injetar função de carregamento de config (para testes).
-func NewDynamoDBServiceWithConfigLoader(ctx context.Context, table string, pkKey string, skKey string, loadConfig func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error)) (*DynamoDBService, error) {
-	resolver := &DynamoDBEndpointResolver{}
-
-	cfg, err := loadConfig(ctx, func(o *config.LoadOptions) error {
-		if endpoint := getenv("DYNAMODB_ENDPOINT"); endpoint != "" {
-			resolver = &DynamoDBEndpointResolver{
-				EndpointURL: endpoint,
-				TableName:   table,
-			}
-			o.EndpointResolverWithOptions = resolver
-		}
-		return nil
-	})
+// NewDynamoDBService padrão, usa config.LoadDefaultConfig
+func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBService, error) {
+	client, err := NewDynamoDBClient(context.TODO(), table, pkKey, skKey)
 
 	if err != nil {
 		return nil, err
 	}
 
-	client := dynamodb.NewFromConfig(cfg)
-
-	// Se for endpoint customizado, garante que a tabela existe
-	if resolver.EndpointURL != "" {
-		err = resolver.EnsureTableExists(ctx, client, skKey)
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return &DynamoDBService{Client: client, Table: table, PKKey: pkKey, SKKey: skKey}, nil
-}
-
-// NewDynamoDBService padrão, usa config.LoadDefaultConfig
-func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBService, error) {
-	return NewDynamoDBServiceWithConfigLoader(context.TODO(), table, pkKey, skKey, config.LoadDefaultConfig)
 }
 
 type ctxKey string
 
 const (
 	CtxNoOverwriteKey ctxKey = "dynamodb_no_overwrite"
-	CtxDeleteTableKey ctxKey = "dynamodb_delete_table"
 )
 
 // PutItem insere um item na tabela DynamoDB.
@@ -146,12 +115,4 @@ func (s *DynamoDBService) UpdateItem(ctx context.Context, ID string, obj interfa
 		return err
 	}
 	return s.updateItemInternal(ctx, ID, item)
-}
-
-// getenv é um helper para leitura de variáveis de ambiente.
-func getenv(key string) string {
-	if v, ok := syscall.Getenv(key); ok {
-		return v
-	}
-	return ""
 }
