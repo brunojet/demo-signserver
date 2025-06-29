@@ -52,12 +52,13 @@ type RequestHistoryEntry struct {
 // SignRequest representa a entidade de intenção de assinatura.
 type SignRequest struct {
 	domain.BaseDomain
-	SignProfileId string                `dynamodbav:"sign_profile_id"`
-	SigningStatus SignerStep            `dynamodbav:"signing_status"`
-	UnsignedFile  BucketInfo            `dynamodbav:"unsigned_file"`
-	SignedFile    BucketInfo            `dynamodbav:"signed_file"`
-	WebhookURL    string                `dynamodbav:"webhook_url"`
-	History       []RequestHistoryEntry `dynamodbav:"history"`
+	Signer          *Signer               `dynamodbav:"signer,omitempty"`
+	SignerProfileId string                `dynamodbav:"signer_profile_id"`
+	SignerStatus    SignerStep            `dynamodbav:"signer_status"`
+	UnsignedFile    BucketInfo            `dynamodbav:"unsigned_file"`
+	SignedFile      BucketInfo            `dynamodbav:"signed_file"`
+	WebhookURL      string                `dynamodbav:"webhook_url"`
+	History         []RequestHistoryEntry `dynamodbav:"history"`
 }
 
 // TransferInfo representa informações de transferência (upload/download) de arquivos.
