@@ -17,7 +17,7 @@ func TestSignProfileService_CRUD(t *testing.T) {
 	profile := &domain.SignProfile{
 		Description: "Dispositivos Postivo perfil 001",
 		Signer:      domain.SignerPositivo,
-		ProfileId:   "001",
+		ProfileId:   "002",
 		Configs:     []domain.DeviceProfileConfig{{Key: "k", Value: "v"}},
 		Upload:      domain.TransferInfo{URL: "https://example.com/upload", Tries: 3, Interval: 5},
 		Download:    domain.TransferInfo{URL: "https://example.com/download", Tries: 3, Interval: 5},

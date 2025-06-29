@@ -38,12 +38,39 @@ func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBServ
 	return NewDynamoDBServiceWithConfigLoader(table, pkKey, skKey, config.LoadDefaultConfig)
 }
 
+type ctxKey string
+
+const CtxNoOverwriteKey ctxKey = "dynamodb_no_overwrite"
+
 // PutItem insere um item na tabela DynamoDB.
 func (s *DynamoDBService) putItem(ctx context.Context, item map[string]types.AttributeValue) error {
 	AddPKSKToItem(item, s.PKKey, s.SKKey)
+
+	var condExpr *string
+	var exprAttrNames map[string]string
+
+	if v := ctx.Value(CtxNoOverwriteKey); v != nil {
+		if noOverwrite, ok := v.(bool); ok && noOverwrite {
+			pkName := s.PKKey
+			if pkName == "" {
+				pkName = PARTITION_KEY
+			}
+			cond := "attribute_not_exists(#pk)"
+			exprAttrNames = map[string]string{"#pk": pkName}
+			if s.SKKey != "" {
+				skName := s.SKKey
+				cond += " AND attribute_not_exists(#sk)"
+				exprAttrNames["#sk"] = skName
+			}
+			condExpr = &cond
+		}
+	}
+
 	_, err := s.Client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: &s.Table,
-		Item:      item,
+		TableName:                &s.Table,
+		Item:                     item,
+		ConditionExpression:      condExpr,
+		ExpressionAttributeNames: exprAttrNames,
 	})
 	return err
 }
@@ -61,8 +88,9 @@ func (s *DynamoDBService) GetItem(ctx context.Context, ID string, out interface{
 	return UnmarshalItem(resp.Item, out)
 }
 
-// CreateItem insere um item apenas se ele ainda não existir (PK não pode existir).
+// CreateItem insere um item, sempre evitando sobrescrita (ConditionExpression).
 func (s *DynamoDBService) CreateItem(ctx context.Context, obj interface{}) error {
+	ctx = context.WithValue(ctx, CtxNoOverwriteKey, true)
 	item, err := MarshalItem(obj)
 	if err != nil {
 		return err
