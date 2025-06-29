@@ -2,27 +2,28 @@ package db_services
 
 import (
 	"context"
+	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-type customTestResolver string
+var (
+	testResolverTableName = "TestTable-002"
+	testResolverEndpoint  = "http://localhost:8001"
+)
 
-func (r customTestResolver) ResolveEndpoint(service, region string) (aws.Endpoint, error) {
-	return aws.Endpoint{URL: string(r), SigningRegion: "us-east-1"}, nil
+func init() {
+	os.Setenv("DYNAMODB_ENDPOINT", testResolverEndpoint)
+	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
 }
 
-func getTestDynamoDBClientAndResolver(t *testing.T, table string) (*dynamodb.Client, *DynamoDBEndpointResolver) {
-	endpoint := "http://localhost:8001"
-	if endpoint == "" {
-		t.Skip("DYNAMODB_ENDPOINT não setado para testes locais")
-	}
+func getTestDynamoDBClientAndResolver(t *testing.T, tableName string) (*dynamodb.Client, *DynamoDBEndpointResolver) {
 	resolver := &DynamoDBEndpointResolver{
-		EndpointURL: endpoint,
-		TableName:   table,
+		EndpointURL: testResolverEndpoint,
+		TableName:   tableName,
 	}
 	cfg, err := config.LoadDefaultConfig(context.TODO(), func(o *config.LoadOptions) error {
 		o.EndpointResolverWithOptions = resolver
@@ -36,8 +37,7 @@ func getTestDynamoDBClientAndResolver(t *testing.T, table string) (*dynamodb.Cli
 }
 
 func TestDynamoDBEndpointResolver_EnsureTableExists(t *testing.T) {
-	table := "test-table-dynamodb-endpoint-resolver"
-	client, resolver := getTestDynamoDBClientAndResolver(t, table)
+	client, resolver := getTestDynamoDBClientAndResolver(t, testResolverTableName)
 	ctx := context.TODO()
 
 	// Tenta criar de novo (não deve dar erro)

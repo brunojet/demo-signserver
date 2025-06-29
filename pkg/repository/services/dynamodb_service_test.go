@@ -5,38 +5,26 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	dynamoClient *dynamodb.Client
-	tableName    = "TestTable"
-	endpoint     = "http://localhost:8001"
+	tableName    = "TestTableService"
 )
 
 func init() {
-	os.Setenv("DYNAMODB_ENDPOINT", endpoint)
-	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
-	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
 	os.Setenv("DELETE_TABLE", "true")
 }
 
 func TestMain(m *testing.M) {
-
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithEndpointResolver(
-			customTestResolver(endpoint),
-		),
-	)
-	if err != nil {
-		panic(err)
-	}
-	dynamoClient = dynamodb.NewFromConfig(cfg)
+	// Use getTestDynamoDBClientAndResolver directly since *testing.T is not available in TestMain
+	t := &testing.T{}
+	dynamoClient, _ = getTestDynamoDBClientAndResolver(t, testTableName)
 
 	// Cria a tabela antes dos testes
-	err = CreateTable(context.TODO(), dynamoClient, tableName, "")
+	err := CreateTable(context.TODO(), dynamoClient, tableName, "")
 	if err != nil {
 		panic(err)
 	}
