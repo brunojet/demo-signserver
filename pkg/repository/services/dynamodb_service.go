@@ -3,6 +3,7 @@ package db_services
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -19,7 +20,10 @@ type DynamoDBService struct {
 
 // NewDynamoDBService padrão, usa config.LoadDefaultConfig
 func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBService, error) {
-	client, resolver, err := NewDynamoDBClient(context.TODO(), table)
+	project := os.Getenv("PROJECT_NAME")
+	env := os.Getenv("ENVIRONMENT")
+	table_name := fmt.Sprintf("%s-%s-%s", project, env, table)
+	client, resolver, err := NewDynamoDBClient(context.TODO(), table_name)
 
 	if err != nil {
 		return nil, err
@@ -35,8 +39,6 @@ func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBServ
 
 	return &DynamoDBService{Client: client, Table: table, PKKey: pkKey, SKKey: skKey}, nil
 }
-
-type ctxKey string
 
 // PutItem insere um item na tabela DynamoDB.
 func (s *DynamoDBService) putItemInternal(ctx context.Context, item map[string]types.AttributeValue) error {

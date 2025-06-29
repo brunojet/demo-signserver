@@ -3,35 +3,21 @@ package services
 import (
 	"context"
 	"demo-signserver/internal/repository/domain"
-	"fmt"
 	"log"
 	"os"
 
 	db_services "demo-signserver/pkg/repository/services"
-
-	"github.com/joho/godotenv"
 )
 
 const SIGNER_KEY = "signer"
 const PROFILE_ID_KEY = "profile_id"
-
-func init() {
-	// Carrega o arquivo .env da pasta config
-	err := godotenv.Load("config/.env")
-	if err != nil {
-		log.Println("Arquivo .env não encontrado, usando variáveis de ambiente do sistema")
-	}
-}
 
 type SignProfileService struct {
 	Dynamo *db_services.DynamoDBService
 }
 
 func NewSignProfileService() *SignProfileService {
-	project := os.Getenv("PROJECT_NAME")
-	env := os.Getenv("ENVIRONMENT")
-	table_name := os.Getenv("SIGN_PROFILE_TABLE")
-	table := fmt.Sprintf("%s-%s-%s", project, env, table_name)
+	table := os.Getenv("SIGN_PROFILE_TABLE")
 	dynamo, err := db_services.NewDynamoDBService(table, SIGNER_KEY, PROFILE_ID_KEY)
 	if err != nil {
 		log.Fatalf("Erro ao inicializar DynamoDBService: %v", err)

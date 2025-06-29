@@ -24,36 +24,36 @@ type BucketInfo struct {
 	SHA256     string `dynamodbav:"sha256"`
 }
 
-// SignStep representa os possíveis passos do fluxo de assinatura.
-type SignStep string
+// SignerStep representa os possíveis passos do fluxo de assinatura.
+type SignerStep string
 
 const (
-	SignStepCreated           SignStep = "created"
-	SignStepUploaded          SignStep = "uploaded"
-	SignStepSigning           SignStep = "signing"
-	SignStepSigned            SignStep = "signed"
-	SignStepDownloadRequested SignStep = "download_requested"
-	SignStepSigningFailed     SignStep = "signing_failed"
+	SignerStepCreated           SignerStep = "created"
+	SignerStepUploaded          SignerStep = "uploaded"
+	SignerStepSigning           SignerStep = "signing"
+	SignerStepSigned            SignerStep = "signed"
+	SignerStepDownloadRequested SignerStep = "download_requested"
+	SignerStepSigningFailed     SignerStep = "signing_failed"
 )
 
-// IntentError representa um erro ocorrido em um passo do fluxo.
-type IntentError struct {
+// SignerError representa um erro ocorrido em um passo do fluxo.
+type SignerError struct {
 	Code    string `dynamodbav:"code"`
 	Message string `dynamodbav:"message"`
 }
 
 // IntentHistoryEntry representa um registro de histórico de um passo do fluxo.
 type RequestHistoryEntry struct {
-	Timestamp int64        `dynamodbav:"timestamp"`
-	SignStep  *SignStep    `dynamodbav:"sign_step,omitempty"`
-	Error     *IntentError `dynamodbav:"error"`
+	Timestamp  int64        `dynamodbav:"timestamp"`
+	SignerStep *SignerStep  `dynamodbav:"sign_step,omitempty"`
+	Error      *SignerError `dynamodbav:"error"`
 }
 
 // SignRequest representa a entidade de intenção de assinatura.
 type SignRequest struct {
 	domain.BaseDomain
 	SignProfileId string                `dynamodbav:"sign_profile_id"`
-	SigningStatus SignStep              `dynamodbav:"signing_status"`
+	SigningStatus SignerStep            `dynamodbav:"signing_status"`
 	UnsignedFile  BucketInfo            `dynamodbav:"unsigned_file"`
 	SignedFile    BucketInfo            `dynamodbav:"signed_file"`
 	WebhookURL    string                `dynamodbav:"webhook_url"`

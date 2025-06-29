@@ -3,23 +3,15 @@ package db_services
 import (
 	"context"
 	"testing"
-
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
 var (
 	testTableName = "TestTable-001"
 )
 
-func getTestDynamoDBClient(t *testing.T) *dynamodb.Client {
-	client, _, _ := getTestDynamoDBClientAndResolver(t, testTableName)
-
-	return client
-}
-
 func TestTableExists_Create_Delete(t *testing.T) {
 	table := testTableName
-	client := getTestDynamoDBClient(t)
+	client, _, _ := getTestDynamoDBClientAndResolver(testTableName)
 	ctx := context.TODO()
 
 	// Garante que a tabela não existe

@@ -12,7 +12,7 @@ var (
 )
 
 func TestDynamoDBEndpointResolver_EnsureTableExists(t *testing.T) {
-	client, resolver, _ := getTestDynamoDBClientAndResolver(t, testResolverTableName)
+	client, resolver, _ := getTestDynamoDBClientAndResolver(testResolverTableName)
 	ctx := context.TODO()
 
 	// Tenta criar de novo (não deve dar erro)
@@ -23,7 +23,7 @@ func TestDynamoDBEndpointResolver_EnsureTableExists(t *testing.T) {
 }
 
 func TestDynamoDBEndpointResolver_EnsureTableExists_NoClient(t *testing.T) {
-	_, resolver, _ := getTestDynamoDBClientAndResolver(t, testResolverTableName)
+	_, resolver, _ := getTestDynamoDBClientAndResolver(testResolverTableName)
 	ctx := context.TODO()
 
 	os.Setenv("DELETE_TABLE", "true") // Força deleção da tabela
@@ -36,7 +36,7 @@ func TestDynamoDBEndpointResolver_EnsureTableExists_NoClient(t *testing.T) {
 }
 
 func TestDynamoDBEndpointResolver_EnsureTableExists_NoClient_2(t *testing.T) {
-	_, resolver, _ := getTestDynamoDBClientAndResolver(t, testResolverTableName)
+	_, resolver, _ := getTestDynamoDBClientAndResolver(testResolverTableName)
 	ctx := context.TODO()
 
 	os.Setenv("DELETE_TABLE", "") // Força deleção da tabela
