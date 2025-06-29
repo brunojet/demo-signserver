@@ -1,5 +1,7 @@
 package domain
 
+import "demo-signserver/pkg/repository/domain"
+
 // ManufacturerType representa os fabricantes suportados para assinatura.
 type Signer string
 
@@ -49,6 +51,7 @@ type RequestHistoryEntry struct {
 
 // SignRequest representa a entidade de intenção de assinatura.
 type SignRequest struct {
+	domain.BaseDomain
 	SignProfileId string                `dynamodbav:"sign_profile_id"`
 	SigningStatus SignStep              `dynamodbav:"signing_status"`
 	UnsignedFile  BucketInfo            `dynamodbav:"unsigned_file"`
@@ -66,15 +69,13 @@ type TransferInfo struct {
 
 // SignProfile representa o perfil de dispositivo associado à intenção.
 type SignProfile struct {
-	ID          string                `json:"id,omitempty" dynamodbav:"-"`
-	CreatedAt   int64                 `dynamodbav:"created_at"`
-	UpdatedAt   int64                 `dynamodbav:"updated_at"`
-	Signer      Signer                `dynamodbav:"signer"`
-	ProfileId   string                `dynamodbav:"profile_id"`
-	Description string                `dynamodbav:"description"`
-	Configs     []DeviceProfileConfig `dynamodbav:"configs"`
-	Upload      TransferInfo          `dynamodbav:"upload"`
-	Download    TransferInfo          `dynamodbav:"download"`
+	domain.BaseDomain
+	Signer      *Signer                `dynamodbav:"signer,omitempty"`
+	ProfileId   *string                `dynamodbav:"profile_id,omitempty"`
+	Description *string                `dynamodbav:"description,omitempty"`
+	Configs     *[]DeviceProfileConfig `dynamodbav:"configs,omitempty"`
+	Upload      *TransferInfo          `dynamodbav:"upload,omitempty"`
+	Download    *TransferInfo          `dynamodbav:"download,omitempty"`
 }
 
 // IntentRepository define o contrato para operações de persistência de intents.

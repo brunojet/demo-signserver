@@ -14,13 +14,16 @@ func TestSignProfileService_CRUD(t *testing.T) {
 
 	service := NewSignProfileService()
 
+	desc := "Dispositivos Postivo perfil 001"
+	profileId := "015"
+	signer := domain.SignerPositivo
 	profile := &domain.SignProfile{
-		Description: "Dispositivos Postivo perfil 001",
-		Signer:      domain.SignerPositivo,
-		ProfileId:   "002",
-		Configs:     []domain.DeviceProfileConfig{{Key: "k", Value: "v"}},
-		Upload:      domain.TransferInfo{URL: "https://example.com/upload", Tries: 3, Interval: 5},
-		Download:    domain.TransferInfo{URL: "https://example.com/download", Tries: 3, Interval: 5},
+		Description: &desc,
+		Signer:      &signer,
+		ProfileId:   &profileId,
+		Configs:     &[]domain.DeviceProfileConfig{{Key: "k", Value: "v"}},
+		Upload:      &domain.TransferInfo{URL: "https://example.com/upload", Tries: 3, Interval: 5},
+		Download:    &domain.TransferInfo{URL: "https://example.com/download", Tries: 3, Interval: 5},
 	}
 
 	err := service.CreateProfile(profile)
@@ -28,25 +31,29 @@ func TestSignProfileService_CRUD(t *testing.T) {
 		t.Fatalf("Erro ao criar perfil: %v", err)
 	}
 
-	fetched, err := service.GetProfileByID(fmt.Sprintf("%s#%s", profile.Signer, profile.ProfileId))
+	fetched, err := service.GetProfileByID(fmt.Sprintf("%s#%s", *profile.Signer, *profile.ProfileId))
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil: %v", err)
 	}
-	if fetched.Description != profile.Description {
-		t.Errorf("Nome esperado %s, obtido %s", profile.Description, fetched.Description)
+	if *fetched.Description != *profile.Description {
+		t.Errorf("Nome esperado %s, obtido %s", *profile.Description, *fetched.Description)
 	}
 
-	fetched.Description = "Unit Test Profile Updated"
-	err = service.UpdateProfile(fetched)
+	updatedDesc := "Unit Test Profile Updated"
+	update := &domain.SignProfile{
+		Description: &updatedDesc,
+	}
+
+	err = service.UpdateProfile(fmt.Sprintf("%s#%s", *fetched.Signer, *fetched.ProfileId), update)
 	if err != nil {
 		t.Fatalf("Erro ao atualizar perfil: %v", err)
 	}
 
-	fetched, err = service.GetProfileByID(fmt.Sprintf("%s#%s", fetched.Signer, fetched.ProfileId))
+	fetched, err = service.GetProfileByID(fmt.Sprintf("%s#%s", *fetched.Signer, *fetched.ProfileId))
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil atualizado: %v", err)
 	}
-	if fetched.Description != "Unit Test Profile Updated" {
-		t.Errorf("Nome esperado 'Unit Test Profile Updated', obtido %s", fetched.Description)
+	if fetched.Description == nil || update.Description == nil || *fetched.Description != *update.Description {
+		t.Errorf("Nome esperado '%s', obtido %v", *update.Description, fetched.Description)
 	}
 }

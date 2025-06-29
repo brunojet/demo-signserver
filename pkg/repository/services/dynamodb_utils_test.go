@@ -114,3 +114,91 @@ func TestMakeKeyByID_EmptyKey(t *testing.T) {
 		t.Errorf("SK should not be set when key is empty")
 	}
 }
+
+func TestBuildUpdateExpression(t *testing.T) {
+	fields := map[string]interface{}{
+		"foo": "bar",
+		"num": 42,
+	}
+	expr, names, values, err := BuildUpdateExpression(fields)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if expr != "SET #foo = :foo, #num = :num" && expr != "SET #num = :num, #foo = :foo" {
+		t.Errorf("unexpected expr: %s", expr)
+	}
+	if names["#foo"] != "foo" || names["#num"] != "num" {
+		t.Errorf("unexpected names: %#v", names)
+	}
+	if _, ok := values[":foo"]; !ok {
+		t.Errorf(":foo missing in values")
+	}
+	if _, ok := values[":num"]; !ok {
+		t.Errorf(":num missing in values")
+	}
+}
+
+func TestIsNonUpdatable(t *testing.T) {
+	for _, k := range NonUpdatableKeys {
+		if !isNonUpdatable(k) {
+			t.Errorf("expected %s to be non-updatable", k)
+		}
+	}
+	if isNonUpdatable("other") {
+		t.Errorf("expected 'other' to be updatable")
+	}
+}
+
+func TestBuildUpdateExpressionFromAVMap(t *testing.T) {
+	b := map[string]types.AttributeValue{
+		"foo":         &types.AttributeValueMemberS{Value: "bar"},
+		"num":         &types.AttributeValueMemberN{Value: "42"},
+		PARTITION_KEY: &types.AttributeValueMemberS{Value: "pkval"},
+		ID_KEY:        &types.AttributeValueMemberS{Value: "idval"},
+	}
+	expr, names, values, err := BuildUpdateExpressionFromAVMap(b)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if expr != "SET #foo = :foo, #num = :num" && expr != "SET #num = :num, #foo = :foo" {
+		t.Errorf("unexpected expr: %s", expr)
+	}
+	if names["#foo"] != "foo" || names["#num"] != "num" {
+		t.Errorf("unexpected names: %#v", names)
+	}
+	if _, ok := values[":foo"]; !ok {
+		t.Errorf(":foo missing in values")
+	}
+	if _, ok := values[":num"]; !ok {
+		t.Errorf(":num missing in values")
+	}
+	// Non-updatable keys should not be present
+	for _, k := range []string{PARTITION_KEY, ID_KEY} {
+		for n := range names {
+			if names[n] == k {
+				t.Errorf("non-updatable key %s present in names", k)
+			}
+		}
+	}
+}
+
+func TestBuildNoOverwriteCondition(t *testing.T) {
+	cond, names := BuildNoOverwriteCondition("user", "type")
+	if cond != "attribute_not_exists(#pk) AND attribute_not_exists(#sk)" {
+		t.Errorf("unexpected cond: %s", cond)
+	}
+	if names["#pk"] != "user" || names["#sk"] != "type" {
+		t.Errorf("unexpected names: %#v", names)
+	}
+
+	cond, names = BuildNoOverwriteCondition("", "")
+	if cond != "attribute_not_exists(#pk)" {
+		t.Errorf("unexpected cond for only PK: %s", cond)
+	}
+	if names["#pk"] != PARTITION_KEY {
+		t.Errorf("unexpected pk name: %s", names["#pk"])
+	}
+	if _, ok := names["#sk"]; ok {
+		t.Errorf("should not have #sk in names")
+	}
+}

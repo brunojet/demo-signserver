@@ -10,11 +10,15 @@ import (
 	"github.com/google/uuid"
 )
 
-const PARTITION_KEY = "pk"
-const SORT_KEY = "sk"
-const ID_KEY = "id"
-const CREATED_AT_KEY = "created_at"
-const UPDATED_AT_KEY = "updated_at"
+const (
+	PARTITION_KEY  = "pk"
+	SORT_KEY       = "sk"
+	ID_KEY         = "id"
+	CREATED_AT_KEY = "created_at"
+	UPDATED_AT_KEY = "updated_at"
+)
+
+var NonUpdatableKeys = []string{PARTITION_KEY, SORT_KEY, ID_KEY, CREATED_AT_KEY}
 
 // MarshalItem converte struct Go para map[string]types.AttributeValue (DynamoDB)
 func MarshalItem(v interface{}) (map[string]types.AttributeValue, error) {
@@ -78,17 +82,91 @@ func AddIDToItem(item map[string]types.AttributeValue, skKey string) {
 }
 
 // MakeKeyByID cria a chave para busca no DynamoDB: PK ou PK/SK
-func MakeKeyByID(key, pkKey, skKey string) map[string]types.AttributeValue {
+func MakeKeyByID(ID, pkKey, skKey string) map[string]types.AttributeValue {
 	result := make(map[string]types.AttributeValue)
 	if skKey != "" {
-		parts := strings.SplitN(key, "#", 2)
+		parts := strings.SplitN(ID, "#", 2)
 		result[PARTITION_KEY] = &types.AttributeValueMemberS{Value: parts[0]}
 		if len(parts) > 1 {
 			result[SORT_KEY] = &types.AttributeValueMemberS{Value: parts[1]}
 		}
 	} else {
-		result[PARTITION_KEY] = &types.AttributeValueMemberS{Value: key}
+		result[PARTITION_KEY] = &types.AttributeValueMemberS{Value: ID}
 	}
 
 	return result
+}
+
+// BuildUpdateExpression monta a UpdateExpression, ExpressionAttributeNames e ExpressionAttributeValues para update parcial no DynamoDB.
+// Ignora campos com valor nil.
+func BuildUpdateExpression(fields map[string]interface{}) (string, map[string]string, map[string]types.AttributeValue, error) {
+	updateExpr := "SET "
+	exprAttrValues := make(map[string]types.AttributeValue)
+	exprAttrNames := make(map[string]string)
+	first := true
+	for k, v := range fields {
+		if v == nil {
+			continue // ignora campos nil
+		}
+		if !first {
+			updateExpr += ", "
+		}
+		first = false
+		phName := "#" + k
+		phValue := ":" + k
+		updateExpr += phName + " = " + phValue
+		exprAttrNames[phName] = k
+		av, err := attributevalue.Marshal(v)
+		if err != nil {
+			return "", nil, nil, err
+		}
+		exprAttrValues[phValue] = av
+	}
+	if first { // nenhum campo válido
+		return "", nil, nil, nil
+	}
+	return updateExpr, exprAttrNames, exprAttrValues, nil
+}
+
+func isNonUpdatable(key string) bool {
+	for _, nonUpdatableKey := range NonUpdatableKeys {
+		if key == nonUpdatableKey {
+			return true
+		}
+	}
+	return false
+}
+
+// BuildUpdateExpressionFromAVMap recebe um map[string]types.AttributeValue (MarshalMap) e monta a UpdateExpression ignorando PK, SK, created_at, updated_at e id.
+// Ignora também campos com valor nil.
+func BuildUpdateExpressionFromAVMap(b map[string]types.AttributeValue) (string, map[string]string, map[string]types.AttributeValue, error) {
+	fields := make(map[string]interface{})
+	for k, v := range b {
+		if isNonUpdatable(k) || v == nil {
+			continue
+		}
+		var val interface{}
+		_ = attributevalue.Unmarshal(v, &val)
+		if val == nil {
+			continue
+		}
+		fields[k] = val
+	}
+	return BuildUpdateExpression(fields)
+}
+
+// BuildNoOverwriteCondition monta a ConditionExpression e ExpressionAttributeNames para evitar sobrescrita de item no DynamoDB.
+func BuildNoOverwriteCondition(pkKey, skKey string) (condExpr string, exprAttrNames map[string]string) {
+	pkName := pkKey
+	if pkName == "" {
+		pkName = PARTITION_KEY
+	}
+	cond := "attribute_not_exists(#pk)"
+	exprAttrNames = map[string]string{"#pk": pkName}
+	if skKey != "" {
+		skName := skKey
+		cond += " AND attribute_not_exists(#sk)"
+		exprAttrNames["#sk"] = skName
+	}
+	return cond, exprAttrNames
 }

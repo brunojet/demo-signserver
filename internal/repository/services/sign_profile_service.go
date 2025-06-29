@@ -52,6 +52,6 @@ func (s *SignProfileService) GetProfileByID(ID string) (*domain.SignProfile, err
 	return &profile, nil
 }
 
-func (s *SignProfileService) UpdateProfile(profile *domain.SignProfile) error {
-	return s.Dynamo.UpdateItem(context.TODO(), profile)
+func (s *SignProfileService) UpdateProfile(ID string, profile *domain.SignProfile) error {
+	return s.Dynamo.UpdateItem(context.TODO(), ID, profile)
 }

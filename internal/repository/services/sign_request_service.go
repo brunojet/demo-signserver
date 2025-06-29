@@ -54,10 +54,10 @@ func (s *SignRequestService) GetIntentByID(ID string) (*domain.SignRequest, erro
 	return &intent, nil
 }
 
-func (s *SignRequestService) UpdateIntent(intent *domain.SignRequest) error {
+func (s *SignRequestService) UpdateIntent(ID string, intent *domain.SignRequest) error {
 	item, err := db_services.MarshalItem(intent)
 	if err != nil {
 		return err
 	}
-	return s.Dynamo.UpdateItem(context.TODO(), item)
+	return s.Dynamo.UpdateItem(context.TODO(), ID, item)
 }
