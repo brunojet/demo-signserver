@@ -13,6 +13,8 @@ import (
 const PARTITION_KEY = "pk"
 const SORT_KEY = "sk"
 const ID_KEY = "id"
+const CREATED_AT_KEY = "created_at"
+const UPDATED_AT_KEY = "updated_at"
 
 // MarshalItem converte struct Go para map[string]types.AttributeValue (DynamoDB)
 func MarshalItem(v interface{}) (map[string]types.AttributeValue, error) {
@@ -28,9 +30,9 @@ func UnmarshalItem(m map[string]types.AttributeValue, out interface{}) error {
 func SetTimestamps(item map[string]types.AttributeValue, isCreate bool) {
 	now := time.Now().Unix()
 	if isCreate {
-		item["created_at"] = &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", now)}
+		item[CREATED_AT_KEY] = &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", now)}
 	}
-	item["updated_at"] = &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", now)}
+	item[UPDATED_AT_KEY] = &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", now)}
 }
 
 // getStringAttrValue extrai o valor string de um types.AttributeValueMemberS, ou retorna "" se não for string

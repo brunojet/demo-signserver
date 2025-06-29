@@ -29,15 +29,18 @@ func TestDynamoDBService_GetItem(t *testing.T) {
 	mock := &db_mock.MockDynamoDBClient{
 		GetItemFunc: func(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error) {
 			assert.Equal(t, "TestTable", *params.TableName)
-			assert.NotNil(t, params.Key["PK"])
-			// Simula item retornado com PK (e SK se necessário)
+			assert.NotNil(t, params.Key["pk"])
+			// Simula item retornado com pk (minúsculo, para bater com a tag do struct)
 			return &dynamodb.GetItemOutput{
-				Item: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "123"}},
+				Item: map[string]types.AttributeValue{"pk": &types.AttributeValueMemberS{Value: "123"}},
 			}, nil
 		},
 	}
-	service := &DynamoDBService{Client: mock, Table: "TestTable", PKKey: "PK", SKKey: ""}
-	item, err := service.GetItem(context.TODO(), "123")
+	service := &DynamoDBService{Client: mock, Table: "TestTable", PKKey: "pk", SKKey: ""}
+	var out struct {
+		PK string `dynamodbav:"pk"`
+	}
+	err := service.GetItem(context.TODO(), "123", &out)
 	assert.NoError(t, err)
-	assert.Equal(t, "123", item["ID"].(*types.AttributeValueMemberS).Value)
+	assert.Equal(t, "123", out.PK)
 }
