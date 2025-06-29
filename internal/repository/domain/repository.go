@@ -66,7 +66,9 @@ type TransferInfo struct {
 
 // SignProfile representa o perfil de dispositivo associado à intenção.
 type SignProfile struct {
-	ID          string                `json:"id,omitempty"`
+	ID          string                `json:"id,omitempty" dynamodbav:"-"`
+	CreatedAt   int64                 `dynamodbav:"created_at"`
+	UpdatedAt   int64                 `dynamodbav:"updated_at"`
 	Signer      Signer                `dynamodbav:"signer"`
 	ProfileId   string                `dynamodbav:"profile_id"`
 	Description string                `dynamodbav:"description"`

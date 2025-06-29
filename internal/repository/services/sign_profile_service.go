@@ -29,85 +29,26 @@ func NewSignProfileService() *SignProfileService {
 	env := os.Getenv("ENVIRONMENT")
 	table_name := os.Getenv("SIGN_PROFILE_TABLE")
 	table := fmt.Sprintf("%s-%s-%s", project, env, table_name)
-	dynamo, err := db_services.NewDynamoDBService(table)
+	dynamo, err := db_services.NewDynamoDBService(table, "signer", "profile_id")
 	if err != nil {
 		log.Fatalf("Erro ao inicializar DynamoDBService: %v", err)
 	}
 	return &SignProfileService{Dynamo: dynamo}
 }
 
-func setProfileId(profile *domain.SignProfile) error {
-	if profile.Signer == "" || profile.ProfileId == "" {
-		return fmt.Errorf("invalid Signer and ProfileID")
-	}
-
-	profileID := fmt.Sprintf("%s;%s", string(profile.Signer), profile.ProfileId)
-
-	if profile.ID != "" && profile.ID != profileID {
-		return fmt.Errorf("ProfileID cannot be changed")
-	}
-
-	profile.ID = profileID
-
-	return nil
-}
-
-func (s *SignProfileService) setPKSK(profile *domain.SignProfile) error {
-	err := setProfileId(profile)
-
-	if err != nil {
-		return err
-	}
-
-	db_services.SetPKSKFromID(profile)
-
-	return err
-}
-
 func (s *SignProfileService) CreateProfile(profile *domain.SignProfile) error {
-	err := s.setPKSK(profile)
-
-	if err != nil {
-		return err
-	}
-
-	db_services.SetTimestamps(profile, true)
-	item, err := db_services.MarshalItem(profile)
-
-	if err != nil {
-		return err
-	}
-
-	return s.Dynamo.PutItem(context.TODO(), item)
+	return s.Dynamo.CreateItem(context.TODO(), profile)
 }
 
-func (s *SignProfileService) GetProfileByID(id string) (*domain.SignProfile, error) {
-	key := db_services.BuildKeyFromID(id)
-	item, err := s.Dynamo.GetItem(context.TODO(), key)
-	if err != nil {
-		return nil, err
-	}
+func (s *SignProfileService) GetProfileByID(ID string) (*domain.SignProfile, error) {
 	var profile domain.SignProfile
-	err = db_services.UnmarshalItem(item, &profile)
+	err := s.Dynamo.GetItem(context.TODO(), ID, &profile)
 	if err != nil {
 		return nil, err
 	}
-	setProfileId(&profile)
-
 	return &profile, nil
 }
 
 func (s *SignProfileService) UpdateProfile(profile *domain.SignProfile) error {
-	err := s.setPKSK(profile)
-
-	if err != nil {
-		return err
-	}
-
-	db_services.SetTimestamps(profile, false)
-	item, err := db_services.MarshalItem(profile)
-	if err != nil {
-		return err
-	}
-	return s.Dynamo.PutItem(context.TODO(), item)
+	return s.Dynamo.UpdateItem(context.TODO(), profile)
 }

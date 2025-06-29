@@ -28,7 +28,7 @@ func TestSignProfileService_CRUD(t *testing.T) {
 		t.Fatalf("Erro ao criar perfil: %v", err)
 	}
 
-	fetched, err := service.GetProfileByID(fmt.Sprintf("%s;%s", profile.Signer, profile.ProfileId))
+	fetched, err := service.GetProfileByID(fmt.Sprintf("%s#%s", profile.Signer, profile.ProfileId))
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil: %v", err)
 	}
@@ -36,13 +36,13 @@ func TestSignProfileService_CRUD(t *testing.T) {
 		t.Errorf("Nome esperado %s, obtido %s", profile.Description, fetched.Description)
 	}
 
-	profile.Description = "Unit Test Profile Updated"
-	err = service.UpdateProfile(profile)
+	fetched.Description = "Unit Test Profile Updated"
+	err = service.UpdateProfile(fetched)
 	if err != nil {
 		t.Fatalf("Erro ao atualizar perfil: %v", err)
 	}
 
-	fetched, err = service.GetProfileByID(fmt.Sprintf("%s;%s", profile.Signer, profile.ProfileId))
+	fetched, err = service.GetProfileByID(fmt.Sprintf("%s#%s", fetched.Signer, fetched.ProfileId))
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil atualizado: %v", err)
 	}

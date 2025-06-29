@@ -30,7 +30,7 @@ func NewSignRequestService() *SignRequestService {
 	env := os.Getenv("ENVIRONMENT")
 	table_name := os.Getenv("SIGN_REQUEST_TABLE")
 	table := fmt.Sprintf("%s-%s-%s", project, env, table_name)
-	dynamo, err := db_services.NewDynamoDBService(table)
+	dynamo, err := db_services.NewDynamoDBService(table, "", "")
 	if err != nil {
 		log.Fatalf("Erro ao inicializar DynamoDBService: %v", err)
 	}
@@ -42,17 +42,12 @@ func (s *SignRequestService) CreateIntent(intent *domain.SignRequest) error {
 	if err != nil {
 		return err
 	}
-	return s.Dynamo.PutItem(context.TODO(), item)
+	return s.Dynamo.CreateItem(context.TODO(), item)
 }
 
-func (s *SignRequestService) GetIntentByID(id string) (*domain.SignRequest, error) {
-	key := db_services.BuildKeyString("pk", id)
-	item, err := s.Dynamo.GetItem(context.TODO(), key)
-	if err != nil {
-		return nil, err
-	}
+func (s *SignRequestService) GetIntentByID(ID string) (*domain.SignRequest, error) {
 	var intent domain.SignRequest
-	err = db_services.UnmarshalItem(item, &intent)
+	err := s.Dynamo.GetItem(context.TODO(), ID, &intent)
 	if err != nil {
 		return nil, err
 	}
@@ -64,5 +59,5 @@ func (s *SignRequestService) UpdateIntent(intent *domain.SignRequest) error {
 	if err != nil {
 		return err
 	}
-	return s.Dynamo.PutItem(context.TODO(), item)
+	return s.Dynamo.UpdateItem(context.TODO(), item)
 }

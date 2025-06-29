@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/google/uuid"
 )
 
 // DynamoDBAPI define interface para mocks do DynamoDB Client.
@@ -40,9 +39,8 @@ func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBServ
 }
 
 // PutItem insere um item na tabela DynamoDB.
-func (s *DynamoDBService) PutItem(ctx context.Context, item map[string]types.AttributeValue) error {
+func (s *DynamoDBService) putItem(ctx context.Context, item map[string]types.AttributeValue) error {
 	AddPKSKToItem(item, s.PKKey, s.SKKey)
-	AddIDToItem(item, s.SKKey)
 	_, err := s.Client.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName: &s.Table,
 		Item:      item,
@@ -51,57 +49,34 @@ func (s *DynamoDBService) PutItem(ctx context.Context, item map[string]types.Att
 }
 
 // GetItem busca um item pela chave.
-func (s *DynamoDBService) GetItem(ctx context.Context, key map[string]types.AttributeValue) (map[string]types.AttributeValue, error) {
+func (s *DynamoDBService) GetItem(ctx context.Context, ID string, out interface{}) error {
 	resp, err := s.Client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: &s.Table,
-		Key:       key,
+		Key:       MakeKeyByID(ID, s.PKKey, s.SKKey),
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	AddIDToItem(resp.Item, s.SKKey)
-	return resp.Item, nil
+	return UnmarshalItem(resp.Item, out)
 }
 
-// getStringAttrValue extrai o valor string de um types.AttributeValueMemberS, ou retorna "" se não for string
-func getStringAttrValue(attr types.AttributeValue) string {
-	if v, ok := attr.(*types.AttributeValueMemberS); ok {
-		return v.Value
+// CreateItem insere um item apenas se ele ainda não existir (PK não pode existir).
+func (s *DynamoDBService) CreateItem(ctx context.Context, obj interface{}) error {
+	item, err := MarshalItem(obj)
+	if err != nil {
+		return err
 	}
-	return ""
+	SetTimestamps(item, true)
+	return s.putItem(ctx, item)
 }
 
-// addPKSKToItem adiciona PK e SK ao item conforme as regras de negócio.
-func (s *DynamoDBService) addPKSKToItem(item map[string]types.AttributeValue) {
-	pkVal, pkOk := item[s.PKKey]
-
-	if s.PKKey == "" || !pkOk {
-		item["PK"] = &types.AttributeValueMemberS{Value: uuid.NewString()}
-	} else {
-		item["PK"] = &types.AttributeValueMemberS{Value: getStringAttrValue(pkVal)}
+// UpdateItem sobrescreve o item (igual ao PutItem atual, mas sem timestamps de criação).
+func (s *DynamoDBService) UpdateItem(ctx context.Context, obj interface{}) error {
+	item, err := MarshalItem(obj)
+	if err != nil {
+		return err
 	}
-
-	if s.SKKey != "" {
-		skVal := item[s.SKKey]
-		item["SK"] = &types.AttributeValueMemberS{Value: getStringAttrValue(skVal)}
-	}
-}
-
-// addIDToItem preenche o campo ID no item a partir de PK e SK
-func (s *DynamoDBService) addIDToItem(item map[string]types.AttributeValue) {
-	pkStr := getStringAttrValue(item["PK"])
-	if pkStr == "" {
-		return
-	}
-	id := pkStr
-
-	if s.SKKey != "" {
-		skStr := getStringAttrValue(item["SK"])
-		if skStr != "" {
-			id += ";" + skStr
-		}
-	}
-
-	item["ID"] = &types.AttributeValueMemberS{Value: id}
-
+	SetTimestamps(item, false)
+	return s.putItem(ctx, item)
 }
