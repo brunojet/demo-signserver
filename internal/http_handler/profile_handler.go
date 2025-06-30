@@ -24,12 +24,12 @@ func (h *ProfileHandler) CreateProfile(c *gin.Context) {
 		return
 	}
 	profile := domain.SignerProfile{
-		Signer:      dto.Signer,
-		ProfileId:   dto.ProfileId,
-		Description: dto.Description,
+		Signer:      &dto.Signer,
+		ProfileId:   &dto.ProfileId,
+		Description: &dto.Description,
 		Configs:     dto.Configs,
-		Upload:      dto.Upload,
-		Download:    dto.Download,
+		Upload:      convertToDomainTransferInfo(&dto.Upload),
+		Download:    convertToDomainTransferInfo(&dto.Download),
 	}
 	ID, err := h.Service.CreateProfile(&profile)
 	if err != nil {
@@ -61,8 +61,8 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 	profile := &domain.SignerProfile{
 		Description: dto.Description,
 		Configs:     dto.Configs,
-		Upload:      dto.Upload,
-		Download:    dto.Download,
+		Upload:      convertToDomainTransferInfo(dto.Upload),
+		Download:    convertToDomainTransferInfo(dto.Download),
 	}
 	err := h.Service.UpdateProfile(id, profile)
 	if err != nil {
@@ -78,6 +78,18 @@ func (h *ProfileHandler) RegisterRoutes(r *gin.Engine) {
 		profiles.POST("", h.CreateProfile)
 		profiles.GET(":id", h.GetProfileByID)
 		profiles.PATCH(":id", h.UpdateProfile)
+	}
+}
+
+// Helper function to convert dtos.TransferInfoDTO to *domain.TransferInfo
+func convertToDomainTransferInfo(dto *dtos.TransferInfoDTO) *domain.TransferInfo {
+	if dto == nil {
+		return nil
+	}
+	return &domain.TransferInfo{
+		URL:      dto.Url,
+		Tries:    dto.Tries,
+		Interval: dto.Interval,
 	}
 }
 

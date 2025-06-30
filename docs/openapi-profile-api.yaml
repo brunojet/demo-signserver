@@ -3,12 +3,21 @@ info:
   title: Profile API
   version: 1.0.0
   description: API para cadastro, consulta e atualização de perfis de assinatura digital.
+  contact:
+    name: Equipe de Desenvolvimento
+    email: contato@empresa.com
+    url: https://empresa.com
+tags:
+  - name: Profile
+    description: Operações relacionadas a perfis de assinatura digital
 servers:
   - url: http://localhost:8080
 paths:
   /profiles:
     post:
+      tags: [Profile]
       summary: Cria um novo perfil
+      description: Cria um novo perfil de assinatura digital.
       operationId: createProfile
       requestBody:
         required: true
@@ -37,7 +46,9 @@ paths:
           description: Erro interno
   /profiles/{id}:
     get:
+      tags: [Profile]
       summary: Consulta um perfil por ID
+      description: Retorna os dados de um perfil de assinatura digital pelo ID.
       operationId: getProfileById
       parameters:
         - in: path
@@ -55,7 +66,9 @@ paths:
         '404':
           description: Perfil não encontrado
     patch:
+      tags: [Profile]
       summary: Atualiza campos de um perfil
+      description: Atualiza parcialmente os dados de um perfil de assinatura digital.
       operationId: updateProfile
       parameters:
         - in: path
