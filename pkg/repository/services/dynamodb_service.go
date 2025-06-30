@@ -113,7 +113,6 @@ func (s *DynamoDBService) GetItem(ctx context.Context, ID string, out domain.Bas
 // CreateItem insere um item, sempre evitando sobrescrita (ConditionExpression).
 func (s *DynamoDBService) CreateItem(ctx context.Context, obj domain.BaseDomainInterface) (string, error) {
 	obj.SetCreateTs()
-
 	item, err := MarshalItem(obj)
 	if err != nil {
 		return "", err
