@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+
+    {
+      "name": "Go: Testes com DynamoDB Local",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${workspaceFolder}",
+      "env": {
+        "PROJECT_NAME": "signserver",
+        "ENVIRONMENT": "dev",
+        "SIGN_PROFILE_TABLE": "profile",
+        "SIGN_REQUEST_TABLE": "request",
+        "DYNAMODB_ENDPOINT": "http://localhost:8001"
+      }
+    },
+    {
+      "name": "Debug Go Server",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/main.go",
+      "env": {
+        "PROJECT_NAME": "signserver",
+        "ENVIRONMENT": "dev",
+        "SIGN_PROFILE_TABLE": "profile",
+        "SIGN_REQUEST_TABLE": "request",
+        "AWS_ACCESS_KEY_ID": "fake",
+        "AWS_SECRET_ACCESS_KEY": "fake",
+        "DYNAMODB_ENDPOINT": "http://localhost:8001"
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

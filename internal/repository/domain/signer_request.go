@@ -46,7 +46,6 @@ type SignerRequestInerface interface {
 // SignRequest representa a entidade de intenção de assinatura.
 type SignRequest struct {
 	domain.BaseDomain
-	Signer          *Signer                `dynamodbav:"signer,omitempty"`
 	SignerProfileId *string                `dynamodbav:"signer_profile_id,omitempty"`
 	SignerStatus    *SignerStep            `dynamodbav:"signer_status,omitempty"`
 	UnsignedFile    *BucketInfo            `dynamodbav:"unsigned_file,omitempty"`

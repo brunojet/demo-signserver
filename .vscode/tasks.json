@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Go Test Coverage HTML",
+			"command": "go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html",
+			"group": "test"
+		}
+	]
+}
