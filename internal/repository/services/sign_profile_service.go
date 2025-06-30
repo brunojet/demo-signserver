@@ -12,6 +12,11 @@ import (
 const SIGNER_KEY = "signer"
 const PROFILE_ID_KEY = "profile_id"
 
+type SignProfileServiceInterface interface {
+	CreateProfile(profile *domain.SignerProfile) (string, error)
+	GetProfileByID(ID string) (*domain.SignerProfile, error)
+	UpdateProfile(ID string, profile *domain.SignerProfile) error
+}
 type SignProfileService struct {
 	Dynamo *db_services.DynamoDBService
 }
