@@ -2,6 +2,7 @@ package db_services
 
 import (
 	"context"
+	"demo-signserver/pkg/repository/domain"
 	"os"
 	"testing"
 
@@ -43,7 +44,7 @@ func TestDynamoDBService_CreateItem(t *testing.T) {
 	}
 	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "name", SKKey: ""}
 	item := Item{Name: pk_value}
-	err := service.CreateItem(context.TODO(), item)
+	_, err := service.CreateItem(context.TODO(), item)
 	assert.NoError(t, err)
 }
 
@@ -54,10 +55,10 @@ func TestDynamoDBService_CreateItem_Error(t *testing.T) {
 	}
 	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "name", SKKey: ""}
 	item := Item{Name: pk_value}
-	err := service.CreateItem(context.TODO(), item)
+	_, err := service.CreateItem(context.TODO(), item)
 	assert.NoError(t, err)
 
-	err = service.CreateItem(context.TODO(), item)
+	_, err = service.CreateItem(context.TODO(), item)
 	assert.Error(t, err)
 
 }
@@ -65,33 +66,36 @@ func TestDynamoDBService_CreateItem_Error(t *testing.T) {
 func TestDynamoDBService_GetItem(t *testing.T) {
 	const pk_value = "123"
 	type Item struct {
+		domain.BaseDomain
 		PK string `dynamodbav:"pk"`
 	}
 	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "pk", SKKey: ""}
 	item := Item{PK: pk_value}
-	_ = service.CreateItem(context.TODO(), item)
+	pk, _ := service.CreateItem(context.TODO(), item)
 	var out Item
-	err := service.GetItem(context.TODO(), pk_value, &out)
+	err := service.GetItem(context.TODO(), pk, &out)
 	assert.NoError(t, err)
-	assert.Equal(t, pk_value, out.PK)
+	assert.Equal(t, pk, out.PK)
 }
 
 func TestDynamoDBService_GetItem_Error(t *testing.T) {
 	const pk_value = "1234"
 	type Item struct {
+		domain.BaseDomain
 		PK string `dynamodbav:"pk"`
 	}
 	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "pk", SKKey: ""}
 	item := Item{PK: pk_value}
-	_ = service.CreateItem(context.TODO(), item)
+	pk, _ := service.CreateItem(context.TODO(), item)
 	var out Item
-	err := service.GetItem(context.TODO(), pk_value+"1", &out)
+	err := service.GetItem(context.TODO(), pk+"1", &out)
 	assert.Error(t, err)
 }
 
 func TestDynamoDBService_UpdateItem(t *testing.T) {
 	const pk_value = "456"
 	type Item struct {
+		domain.BaseDomain
 		PK   string `dynamodbav:"pk"`
 		Name string `dynamodbav:"name"`
 	}
@@ -99,19 +103,19 @@ func TestDynamoDBService_UpdateItem(t *testing.T) {
 	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "pk", SKKey: ""}
 	// Cria item inicial
 	item := Item{PK: pk_value, Name: "original"}
-	err := service.CreateItem(context.TODO(), item)
+	pk, err := service.CreateItem(context.TODO(), item)
 	assert.NoError(t, err)
 
 	// Atualiza campo Name
 	update := Item{Name: "updated"}
-	err = service.UpdateItem(context.TODO(), pk_value, update)
+	err = service.UpdateItem(context.TODO(), pk, update)
 	assert.NoError(t, err)
 
 	// Busca e valida
 	var out Item
-	err = service.GetItem(context.TODO(), pk_value, &out)
+	err = service.GetItem(context.TODO(), pk, &out)
 	assert.NoError(t, err)
-	assert.Equal(t, pk_value, out.PK)
+	assert.Equal(t, pk, out.PK)
 	assert.Equal(t, "updated", out.Name)
 }
 
@@ -125,12 +129,12 @@ func TestDynamoDBService_UpdateItem_Error(t *testing.T) {
 	service := &DynamoDBService{Client: dynamoClient, Table: tableNameService, PKKey: "pk", SKKey: ""}
 	// Cria item inicial
 	item := Item{PK: pk_value, Name: "original"}
-	err := service.CreateItem(context.TODO(), item)
+	pk, err := service.CreateItem(context.TODO(), item)
 	assert.NoError(t, err)
 
 	// Atualiza campo Name
 	update := Item{Name: "updated"}
-	err = service.UpdateItem(context.TODO(), pk_value+"1", update)
+	err = service.UpdateItem(context.TODO(), pk+"1", update)
 	assert.Error(t, err)
 }
 

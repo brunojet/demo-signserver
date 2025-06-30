@@ -2,6 +2,7 @@ package db_services
 
 import (
 	"context"
+	"demo-signserver/pkg/repository/domain"
 	"fmt"
 	"os"
 
@@ -37,7 +38,7 @@ func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBServ
 		}
 	}
 
-	return &DynamoDBService{Client: client, Table: table, PKKey: pkKey, SKKey: skKey}, nil
+	return &DynamoDBService{Client: client, Table: table_name, PKKey: pkKey, SKKey: skKey}, nil
 }
 
 // PutItem insere um item na tabela DynamoDB.
@@ -56,6 +57,7 @@ func (s *DynamoDBService) putItemInternal(ctx context.Context, item map[string]t
 	if err != nil {
 		fmt.Printf("[DynamoDBService] Erro ao inserir item na tabela %s: %v\n", s.Table, err)
 	}
+	AddIDToItem(item, s.SKKey)
 	return err
 }
 
@@ -85,8 +87,12 @@ func (s *DynamoDBService) updateItemInternal(ctx context.Context, ID string, ite
 	return err
 }
 
+// HasID define interface para structs que possuem ID
+// Deve ser implementada por todos que embutem BaseDomain
+// Exemplo: func (s *SignRequest) SetID(id string) { s.ID = id }
+
 // GetItem busca um item pela chave.
-func (s *DynamoDBService) GetItem(ctx context.Context, ID string, out interface{}) error {
+func (s *DynamoDBService) GetItem(ctx context.Context, ID string, out domain.BaseDomainInterface) error {
 	resp, err := s.Client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: &s.Table,
 		Key:       MakeKeyByID(ID, s.PKKey, s.SKKey),
@@ -97,17 +103,33 @@ func (s *DynamoDBService) GetItem(ctx context.Context, ID string, out interface{
 		}
 		return err
 	}
-	AddIDToItem(resp.Item, s.SKKey)
-	return UnmarshalItem(resp.Item, out)
-}
 
-// CreateItem insere um item, sempre evitando sobrescrita (ConditionExpression).
-func (s *DynamoDBService) CreateItem(ctx context.Context, obj interface{}) error {
-	item, err := MarshalItem(obj)
+	err = UnmarshalItem(resp.Item, out)
 	if err != nil {
 		return err
 	}
-	return s.putItemInternal(ctx, item)
+
+	out.SetID(ID)
+
+	return nil
+}
+
+// CreateItem insere um item, sempre evitando sobrescrita (ConditionExpression).
+func (s *DynamoDBService) CreateItem(ctx context.Context, obj interface{}) (string, error) {
+	item, err := MarshalItem(obj)
+	if err != nil {
+		return "", err
+	}
+
+	err = s.putItemInternal(ctx, item)
+
+	if err != nil {
+		return "", err
+	}
+
+	ID := GetStringAttrValue(item[ID_KEY])
+
+	return ID, err
 }
 
 // UpdateItem atualiza apenas os campos não-chave do objeto informado (update parcial).

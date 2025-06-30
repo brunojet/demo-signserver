@@ -2,7 +2,6 @@ package services
 
 import (
 	"demo-signserver/internal/repository/domain"
-	"fmt"
 	"os"
 	"testing"
 )
@@ -23,21 +22,21 @@ func TestSignProfileService_CRUD(t *testing.T) {
 	desc := "Dispositivos Postivo perfil 001"
 	profileId := "015"
 	signer := domain.SignerPositivo
-	profile := &domain.SignProfile{
+	profile := &domain.SignerProfile{
 		Description: &desc,
 		Signer:      &signer,
 		ProfileId:   &profileId,
-		Configs:     &[]domain.DeviceProfileConfig{{Key: "k", Value: "v"}},
+		Configs:     &[]domain.ProfileConfig{{Key: "k", Value: "v"}},
 		Upload:      &domain.TransferInfo{URL: "https://example.com/upload", Tries: 3, Interval: 5},
 		Download:    &domain.TransferInfo{URL: "https://example.com/download", Tries: 3, Interval: 5},
 	}
 
-	err := service.CreateProfile(profile)
+	pk, err := service.CreateProfile(profile)
 	if err != nil {
 		t.Fatalf("Erro ao criar perfil: %v", err)
 	}
 
-	fetched, err := service.GetProfileByID(fmt.Sprintf("%s#%s", *profile.Signer, *profile.ProfileId))
+	fetched, err := service.GetProfileByID(pk)
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil: %v", err)
 	}
@@ -46,16 +45,16 @@ func TestSignProfileService_CRUD(t *testing.T) {
 	}
 
 	updatedDesc := "Unit Test Profile Updated"
-	update := &domain.SignProfile{
+	update := &domain.SignerProfile{
 		Description: &updatedDesc,
 	}
 
-	err = service.UpdateProfile(fmt.Sprintf("%s#%s", *fetched.Signer, *fetched.ProfileId), update)
+	err = service.UpdateProfile(pk, update)
 	if err != nil {
 		t.Fatalf("Erro ao atualizar perfil: %v", err)
 	}
 
-	fetched, err = service.GetProfileByID(fmt.Sprintf("%s#%s", *fetched.Signer, *fetched.ProfileId))
+	fetched, err = service.GetProfileByID(pk)
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil atualizado: %v", err)
 	}

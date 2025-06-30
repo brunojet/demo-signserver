@@ -23,10 +23,10 @@ func NewSignRequestService() *SignRequestService {
 	return &SignRequestService{Dynamo: dynamo}
 }
 
-func (s *SignRequestService) CreateRequest(request *domain.SignRequest) error {
+func (s *SignRequestService) CreateRequest(request *domain.SignRequest) (string, error) {
 	item, err := db_services.MarshalItem(request)
 	if err != nil {
-		return err
+		return "", err
 	}
 	return s.Dynamo.CreateItem(context.TODO(), item)
 }

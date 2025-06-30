@@ -173,9 +173,26 @@ func BuildNoOverwriteCondition(pkKey, skKey string) (condExpr string, exprAttrNa
 
 // BuildUpdateCondition retorna uma ConditionExpression para garantir que o item existe antes do update.
 func BuildUpdateCondition(pkKey, skKey string) string {
+	if pkKey == "" {
+		pkKey = PARTITION_KEY
+	}
+
 	cond := fmt.Sprintf("attribute_exists(%s)", pkKey)
 	if skKey != "" {
 		cond += fmt.Sprintf(" AND attribute_exists(%s)", skKey)
 	}
 	return cond
+}
+
+// ExtractPartitionKey extrai e desserializa a partition key de um item do DynamoDB.
+func ExtractPartitionKey(item map[string]types.AttributeValue, pkField string) (string, error) {
+	var pk string
+	if av, ok := item[pkField]; ok {
+		if err := attributevalue.Unmarshal(av, &pk); err != nil {
+			return "", err
+		}
+	} else {
+		return "", fmt.Errorf("partition key %s not found in item", pkField)
+	}
+	return pk, nil
 }
