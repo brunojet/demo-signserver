@@ -11,7 +11,7 @@ type CreateSignRequestDTO struct {
 
 type CreateSignResponseDTO struct {
 	ID           string `json:"id" binding:"required"`
-	PreSignedURL string `json:"pre_signed_url" binding:"required"`
+	PreSignedURL string `json:"pre_signed_url" binding:"required,url"`
 }
 
 func (d *CreateSignRequestDTO) GetDomainCreateSignRequest() *domain.SignRequest {
