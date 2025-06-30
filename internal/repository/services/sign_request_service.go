@@ -24,11 +24,7 @@ func NewSignRequestService() *SignRequestService {
 }
 
 func (s *SignRequestService) CreateRequest(request *domain.SignRequest) (string, error) {
-	item, err := db_services.MarshalItem(request)
-	if err != nil {
-		return "", err
-	}
-	return s.Dynamo.CreateItem(context.TODO(), item)
+	return s.Dynamo.CreateItem(context.TODO(), request)
 }
 
 func (s *SignRequestService) GetRequestByID(ID string) (*domain.SignRequest, error) {
@@ -41,9 +37,5 @@ func (s *SignRequestService) GetRequestByID(ID string) (*domain.SignRequest, err
 }
 
 func (s *SignRequestService) UpdateRequest(ID string, request *domain.SignRequest) error {
-	item, err := db_services.MarshalItem(request)
-	if err != nil {
-		return err
-	}
-	return s.Dynamo.UpdateItem(context.TODO(), ID, item)
+	return s.Dynamo.UpdateItem(context.TODO(), ID, request)
 }

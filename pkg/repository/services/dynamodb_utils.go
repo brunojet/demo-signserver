@@ -3,7 +3,6 @@ package db_services
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
@@ -28,15 +27,6 @@ func MarshalItem(v interface{}) (map[string]types.AttributeValue, error) {
 // UnmarshalItem converte map[string]types.AttributeValue para struct Go (DynamoDB)
 func UnmarshalItem(m map[string]types.AttributeValue, out interface{}) error {
 	return attributevalue.UnmarshalMap(m, out)
-}
-
-// setTimestamps preenche CreatedAt e UpdatedAt em item map[string]types.AttributeValue
-func SetTimestamps(item map[string]types.AttributeValue, isCreate bool) {
-	now := time.Now().Unix()
-	if isCreate {
-		item[CREATED_AT_KEY] = &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", now)}
-	}
-	item[UPDATED_AT_KEY] = &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", now)}
 }
 
 // getStringAttrValue extrai o valor string de um types.AttributeValueMemberS, ou retorna "" se não for string

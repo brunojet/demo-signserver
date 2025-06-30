@@ -1,7 +1,11 @@
 package domain
 
+import "time"
+
 type BaseDomainInterface interface {
 	SetID(string)
+	SetCreateTs()
+	SetUpdateTs()
 }
 
 type BaseDomain struct {
@@ -12,4 +16,15 @@ type BaseDomain struct {
 
 func (b *BaseDomain) SetID(id string) {
 	b.ID = id
+}
+
+func (b *BaseDomain) SetCreateTs() {
+	now := time.Now().Unix()
+	b.CreatedAt = now
+	b.UpdatedAt = now
+}
+
+func (b *BaseDomain) SetUpdateTs() {
+	now := time.Now().Unix()
+	b.UpdatedAt = now
 }
