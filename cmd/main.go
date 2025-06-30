@@ -1,7 +1,7 @@
 package main
 
 import (
-	"demo-signserver/internal/http_handler"
+	"demo-signserver/internal/request/http_handlers"
 	"log"
 	"os"
 
@@ -12,7 +12,7 @@ func main() {
 	r := gin.Default()
 
 	// Rotas de perfil
-	http_handler.RegisterProfileRoutes(r)
+	http_handlers.RegisterProfileRoutes(r)
 
 	port := os.Getenv("PORT")
 	if port == "" {

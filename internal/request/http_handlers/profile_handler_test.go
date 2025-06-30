@@ -1,4 +1,4 @@
-package http_handler
+package http_handlers
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"demo-signserver/internal/http_handler/dtos"
+	"demo-signserver/internal/request/dtos"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

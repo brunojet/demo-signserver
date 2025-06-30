@@ -1,8 +1,8 @@
-package http_handler
+package http_handlers
 
 import (
-	"demo-signserver/internal/http_handler/application"
-	"demo-signserver/internal/http_handler/dtos"
+	"demo-signserver/internal/request/dtos"
+	"demo-signserver/internal/request/services"
 	"fmt"
 	"net/http"
 
@@ -10,10 +10,10 @@ import (
 )
 
 type ProfileHandler struct {
-	Service *application.ProfileService
+	Service *services.ProfileService
 }
 
-func NewProfileHandler(service *application.ProfileService) *ProfileHandler {
+func NewProfileHandler(service *services.ProfileService) *ProfileHandler {
 	return &ProfileHandler{Service: service}
 }
 
@@ -75,7 +75,7 @@ func (h *ProfileHandler) RegisterRoutes(r *gin.Engine) {
 }
 
 func RegisterProfileRoutes(r *gin.Engine) {
-	profileService := application.NewProfileService()
+	profileService := services.NewProfileService()
 	profileHandler := NewProfileHandler(profileService)
 	profileHandler.RegisterRoutes(r)
 }

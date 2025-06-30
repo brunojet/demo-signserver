@@ -24,7 +24,8 @@ func (d *CreateSignRequestDTO) GetDomainCreateSignRequest() *domain.SignRequest 
 }
 
 type GetResponseDTO struct {
-	ID           string            `json:"id" binding:"required"`
-	SignerStatus domain.SignerStep `json:"signer_status,omitempty" binding:"required"`
-	DownloadURL  *string           `json:"pre_signed_url" binding:"required,url"`
+	ID           string              `json:"id" binding:"required"`
+	SignerStatus domain.SignerStep   `json:"signer_status,omitempty" binding:"required"`
+	SignerError  *domain.SignerError `json:"signer_error,omitempty"`
+	DownloadURL  *string             `json:"pre_signed_url" binding:"required,url"`
 }
