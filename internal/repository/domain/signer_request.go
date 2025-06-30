@@ -1,6 +1,9 @@
 package domain
 
-import "demo-signserver/pkg/repository/domain"
+import (
+	"demo-signserver/pkg/repository/domain"
+	"time"
+)
 
 // BucketInfo representa informações de um arquivo em um bucket.
 type BucketInfo struct {
@@ -35,6 +38,11 @@ type RequestHistoryEntry struct {
 	Error      *SignerError `dynamodbav:"error"`
 }
 
+type SignerRequestInerface interface {
+	domain.BaseDomainInterface
+	SetSignerStatus(step SignerStep, err SignerError)
+}
+
 // SignRequest representa a entidade de intenção de assinatura.
 type SignRequest struct {
 	domain.BaseDomain
@@ -45,4 +53,23 @@ type SignRequest struct {
 	SignedFile      *BucketInfo            `dynamodbav:"signed_file,omitempty"`
 	WebhookURL      *string                `dynamodbav:"webhook_url,omitempty"`
 	History         *[]RequestHistoryEntry `dynamodbav:"history,omitempty"`
+}
+
+func (s *SignRequest) SetSignerStatus(step SignerStep, err SignerError) {
+	if s.SignerStatus == nil {
+		s.SignerStatus = &step
+	} else {
+		*s.SignerStatus = step
+	}
+
+	if s.History == nil {
+		s.History = &[]RequestHistoryEntry{}
+	}
+
+	history := RequestHistoryEntry{
+		Timestamp:  time.Now().Unix(),
+		SignerStep: &step,
+		Error:      &err,
+	}
+	*s.History = append(*s.History, history)
 }
