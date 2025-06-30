@@ -4,6 +4,7 @@ import (
 	"demo-signserver/internal/http_handler/application"
 	"demo-signserver/internal/http_handler/dtos"
 	"demo-signserver/internal/repository/domain"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -66,6 +67,10 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 	}
 	err := h.Service.UpdateProfile(id, profile)
 	if err != nil {
+		if isDynamoDBValidationException(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -97,4 +102,19 @@ func RegisterProfileRoutes(r *gin.Engine) {
 	profileService := application.NewProfileService()
 	profileHandler := NewProfileHandler(profileService)
 	profileHandler.RegisterRoutes(r)
+}
+
+func isDynamoDBValidationException(err error) bool {
+	if err != nil &&
+		(len(err.Error()) > 0 &&
+			((contains(err.Error(), "ValidationException") && contains(err.Error(), "number of conditions on the keys is invalid")) ||
+				contains(err.Error(), "ConditionalCheckFailed"))) {
+		fmt.Printf("DynamoDB validation exception: %v\n", err)
+		return true
+	}
+	return false
+}
+
+func contains(s, substr string) bool {
+	return s != "" && substr != "" && (len(s) >= len(substr)) && (s == substr || (len(s) > len(substr) && (s[0:len(substr)] == substr || contains(s[1:], substr))))
 }
