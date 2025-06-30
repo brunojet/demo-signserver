@@ -4,6 +4,6 @@
     "ENVIRONMENT": "dev",
     "SIGN_PROFILE_TABLE": "profile",
     "SIGN_REQUEST_TABLE": "request",
-    "DYNAMODB_ENDPOINT": "http://localhost:8000"
+    "DYNAMODB_ENDPOINT": "http://localhost:8001"
   }
 }
