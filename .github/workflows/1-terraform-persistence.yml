@@ -29,12 +29,3 @@ jobs:
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  terraform-orchestrator:
-    needs: terraform-persistence
-    uses: ./.github/workflows/terraform-reusable.yml
-    with:
-      working-directory: iac/infra/orchestrator
-      environment: aws-brunojet
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

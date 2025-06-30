@@ -1,0 +1,72 @@
+package db_services
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+)
+
+// TableExists retorna true se a tabela existe, false se não existe, ou erro se outro erro.
+func TableExists(ctx context.Context, client *dynamodb.Client, table string) bool {
+	_, err := client.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
+	if err == nil {
+		return true
+	}
+	var rnfe *types.ResourceNotFoundException
+	if errors.As(err, &rnfe) {
+		return false
+	}
+	return false
+}
+
+// DeleteTable remove a tabela se ela existir (útil para testes).
+func DeleteTable(ctx context.Context, client *dynamodb.Client, table string) error {
+	if !TableExists(ctx, client, table) {
+		return nil
+	}
+
+	_, err := client.DeleteTable(ctx, &dynamodb.DeleteTableInput{
+		TableName: &table,
+	})
+
+	if err != nil {
+		fmt.Printf("[DynamoDBService] Erro ao deletar tabela %s: %v\n", table, err)
+		return fmt.Errorf("erro ao deletar tabela %s: %w", table, err)
+	}
+
+	fmt.Printf("[DynamoDBService] Tabela %s deletada com sucesso.\n", table)
+	return nil
+}
+
+// CreateTable cria uma tabela DynamoDB com pk obrigatória e sk opcional (sempre usando nomes físicos pk/sk).
+func CreateTable(ctx context.Context, client *dynamodb.Client, table string, skKey string) error {
+	if TableExists(ctx, client, table) {
+		return nil
+	}
+
+	pkPhysical := "pk"
+	attrs := []types.AttributeDefinition{{AttributeName: &pkPhysical, AttributeType: types.ScalarAttributeTypeS}}
+	keySchema := []types.KeySchemaElement{{AttributeName: &pkPhysical, KeyType: types.KeyTypeHash}}
+
+	if skKey != "" {
+		skPhysical := "sk"
+		attrs = append(attrs, types.AttributeDefinition{AttributeName: &skPhysical, AttributeType: types.ScalarAttributeTypeS})
+		keySchema = append(keySchema, types.KeySchemaElement{AttributeName: &skPhysical, KeyType: types.KeyTypeRange})
+	}
+
+	_, err := client.CreateTable(ctx, &dynamodb.CreateTableInput{
+		TableName:            &table,
+		AttributeDefinitions: attrs,
+		KeySchema:            keySchema,
+		BillingMode:          types.BillingModePayPerRequest,
+	})
+	if err != nil {
+		fmt.Printf("[DynamoDBService] Erro ao criar tabela %s: %v\n", table, err)
+		return fmt.Errorf("erro ao criar tabela %s: %w", table, err)
+	}
+	fmt.Printf("[DynamoDBService] Tabela %s criada com sucesso (pk/sk).\n", table)
+	return nil
+}

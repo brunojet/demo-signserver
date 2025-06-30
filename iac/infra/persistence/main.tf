@@ -4,15 +4,15 @@ provider "aws" {
 
 module "persistence_bucket" {
   source      = "../modules/s3_bucket"
-  bucket_name = "apk-files"
-  versioning  = true
+  bucket_name = "storage"
+  versioning  = false
   tags        = local.tags
   project_env = local.project_env
 }
 
 module "device_profile_table" {
   source     = "../modules/dynamodb_table"
-  table_name = "device-profile"
+  table_name = "profile"
   hash_key   = "pk"
   range_key  = "sk"
   attributes = [
@@ -25,12 +25,10 @@ module "device_profile_table" {
 
 module "signature_request_table" {
   source     = "../modules/dynamodb_table"
-  table_name = "signature-request"
+  table_name = "request"
   hash_key   = "pk"
-  range_key  = "sk"
   attributes = [
-    { name = "pk", type = "S" },
-    { name = "sk", type = "S" }
+    { name = "pk", type = "S" }
   ]
   tags        = local.tags
   project_env = local.project_env
