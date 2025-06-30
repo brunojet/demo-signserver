@@ -31,12 +31,12 @@ func TestSignProfileService_CRUD(t *testing.T) {
 		Download:    &domain.TransferInfo{URL: "https://example.com/download", Tries: 3, Interval: 5},
 	}
 
-	pk, err := service.CreateProfile(profile)
+	ID, err := service.CreateProfile(profile)
 	if err != nil {
 		t.Fatalf("Erro ao criar perfil: %v", err)
 	}
 
-	fetched, err := service.GetProfileByID(pk)
+	fetched, err := service.GetProfileByID(ID)
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil: %v", err)
 	}
@@ -49,12 +49,12 @@ func TestSignProfileService_CRUD(t *testing.T) {
 		Description: &updatedDesc,
 	}
 
-	err = service.UpdateProfile(pk, update)
+	err = service.UpdateProfile(ID, update)
 	if err != nil {
 		t.Fatalf("Erro ao atualizar perfil: %v", err)
 	}
 
-	fetched, err = service.GetProfileByID(pk)
+	fetched, err = service.GetProfileByID(ID)
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil atualizado: %v", err)
 	}

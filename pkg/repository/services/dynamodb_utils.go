@@ -183,16 +183,3 @@ func BuildUpdateCondition(pkKey, skKey string) string {
 	}
 	return cond
 }
-
-// ExtractPartitionKey extrai e desserializa a partition key de um item do DynamoDB.
-func ExtractPartitionKey(item map[string]types.AttributeValue, pkField string) (string, error) {
-	var pk string
-	if av, ok := item[pkField]; ok {
-		if err := attributevalue.Unmarshal(av, &pk); err != nil {
-			return "", err
-		}
-	} else {
-		return "", fmt.Errorf("partition key %s not found in item", pkField)
-	}
-	return pk, nil
-}
