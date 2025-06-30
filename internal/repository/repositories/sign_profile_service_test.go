@@ -1,4 +1,4 @@
-package services
+package repositories
 
 import (
 	"demo-signserver/internal/repository/domain"

@@ -2,22 +2,22 @@ package services
 
 import (
 	"demo-signserver/internal/repository/domain"
-	"demo-signserver/internal/repository/services"
+	"demo-signserver/internal/repository/repositories"
 )
 
 type ProfileService struct {
-	service *services.SignProfileService
+	service *repositories.SignProfileService
 }
 
-var profile_service *services.SignProfileService = nil
+var profile_service *repositories.SignProfileService = nil
 
-func SetProfileServiceMock(mock *services.SignProfileService) {
+func SetProfileServiceMock(mock *repositories.SignProfileService) {
 	profile_service = mock
 }
 
-func getProfileService() *services.SignProfileService {
+func getProfileService() *repositories.SignProfileService {
 	if profile_service == nil {
-		profile_service = services.NewSignProfileService()
+		profile_service = repositories.NewSignProfileService()
 	}
 	return profile_service
 }
