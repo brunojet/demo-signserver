@@ -3,7 +3,6 @@ package http_handler
 import (
 	"demo-signserver/internal/http_handler/application"
 	"demo-signserver/internal/http_handler/dtos"
-	"demo-signserver/internal/repository/domain"
 	"fmt"
 	"net/http"
 
@@ -24,15 +23,8 @@ func (h *ProfileHandler) CreateProfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	profile := domain.SignerProfile{
-		Signer:      &dto.Signer,
-		ProfileId:   &dto.ProfileId,
-		Description: &dto.Description,
-		Configs:     dto.Configs,
-		Upload:      convertToDomainTransferInfo(&dto.Upload),
-		Download:    convertToDomainTransferInfo(&dto.Download),
-	}
-	ID, err := h.Service.CreateProfile(&profile)
+	profile := dto.GetDomainCreateSignerProfile()
+	ID, err := h.Service.CreateProfile(profile)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -59,12 +51,8 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 	// Monta struct parcial apenas com os campos preenchidos
-	profile := &domain.SignerProfile{
-		Description: dto.Description,
-		Configs:     dto.Configs,
-		Upload:      convertToDomainTransferInfo(dto.Upload),
-		Download:    convertToDomainTransferInfo(dto.Download),
-	}
+	profile := dto.GetDomainUpdateSignerProfile()
+
 	err := h.Service.UpdateProfile(id, profile)
 	if err != nil {
 		if isDynamoDBValidationException(err) {
@@ -83,18 +71,6 @@ func (h *ProfileHandler) RegisterRoutes(r *gin.Engine) {
 		profiles.POST("", h.CreateProfile)
 		profiles.GET(":id", h.GetProfileByID)
 		profiles.PATCH(":id", h.UpdateProfile)
-	}
-}
-
-// Helper function to convert dtos.TransferInfoDTO to *domain.TransferInfo
-func convertToDomainTransferInfo(dto *dtos.TransferInfoDTO) *domain.TransferInfo {
-	if dto == nil {
-		return nil
-	}
-	return &domain.TransferInfo{
-		URL:      dto.Url,
-		Tries:    dto.Tries,
-		Interval: dto.Interval,
 	}
 }
 
