@@ -31,10 +31,8 @@ func TestSignRequest_Fields(t *testing.T) {
 	file := &BucketInfo{BucketName: "b", ObjectKey: "o", Size: 1, SHA256: "s"}
 	hist := []RequestHistoryEntry{{Timestamp: 1}}
 	// signer := "" // Remove this line since Signer expects *Signer, not *string
-	var signer *Signer = nil // or initialize a *Signer if needed
 	sr := &SignRequest{
 		BaseDomain:      domain.BaseDomain{},
-		Signer:          signer,
 		SignerProfileId: &profileID,
 		SignerStatus:    &status,
 		UnsignedFile:    file,
@@ -43,7 +41,6 @@ func TestSignRequest_Fields(t *testing.T) {
 		History:         &hist,
 	}
 	assert.NotNil(t, sr.BaseDomain)
-	assert.Nil(t, sr.Signer)
 	assert.Equal(t, &profileID, sr.SignerProfileId)
 	assert.Equal(t, &status, sr.SignerStatus)
 	assert.Equal(t, file, sr.UnsignedFile)
