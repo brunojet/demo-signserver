@@ -15,11 +15,11 @@ func TestBaseDomain_SetID(t *testing.T) {
 func TestBaseDomain_SetCreateTs(t *testing.T) {
 	b := &BaseDomain{}
 	b.SetCreateTs()
-	if b.CreatedAt == 0 || b.UpdatedAt == 0 {
-		t.Errorf("SetCreateTs não preencheu os campos corretamente: CreatedAt=%d, UpdatedAt=%d", b.CreatedAt, b.UpdatedAt)
+	if b.CreatedAt == "" || b.UpdatedAt == "" {
+		t.Errorf("SetCreateTs não preencheu os campos corretamente: CreatedAt=%s, UpdatedAt=%s", b.CreatedAt, b.UpdatedAt)
 	}
 	if b.CreatedAt != b.UpdatedAt {
-		t.Errorf("CreatedAt e UpdatedAt deveriam ser iguais após SetCreateTs, mas são diferentes: %d vs %d", b.CreatedAt, b.UpdatedAt)
+		t.Errorf("CreatedAt e UpdatedAt deveriam ser iguais após SetCreateTs, mas são diferentes: %s vs %s", b.CreatedAt, b.UpdatedAt)
 	}
 }
 
@@ -29,7 +29,7 @@ func TestBaseDomain_SetUpdateTs(t *testing.T) {
 	oldCreated := b.CreatedAt
 	oldUpdated := b.UpdatedAt
 	b.SetUpdateTs()
-	if b.UpdatedAt == 0 {
+	if b.UpdatedAt == "" {
 		t.Errorf("SetUpdateTs não preencheu UpdatedAt corretamente")
 	}
 	if b.UpdatedAt < oldUpdated {

@@ -25,6 +25,10 @@ func (h *RequestHandler) CreateRequest(c *gin.Context) {
 	req := dto.GetDomainCreateSignRequest()
 	ID, err := h.Service.CreateRequest(req)
 	if err != nil {
+		if contains(err.Error(), "não encontrado") {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

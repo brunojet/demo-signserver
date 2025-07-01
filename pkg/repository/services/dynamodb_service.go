@@ -24,18 +24,10 @@ func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBServ
 	project := os.Getenv("PROJECT_NAME")
 	env := os.Getenv("ENVIRONMENT")
 	table_name := fmt.Sprintf("%s-%s-%s", project, env, table)
-	client, resolver, err := NewDynamoDBClient(context.TODO(), table_name)
+	client, err := NewDynamoDBClient(context.TODO(), table_name)
 
 	if err != nil {
 		return nil, err
-	}
-
-	// Se for endpoint customizado, garante que a tabela existe
-	if resolver.EndpointURL != "" {
-		err = resolver.EnsureTableExists(context.TODO(), client, skKey)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return &DynamoDBService{Client: client, Table: table_name, PKKey: pkKey, SKKey: skKey}, nil

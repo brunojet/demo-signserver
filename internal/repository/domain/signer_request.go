@@ -33,7 +33,7 @@ type SignerError struct {
 
 // IntentHistoryEntry representa um registro de histórico de um passo do fluxo.
 type RequestHistoryEntry struct {
-	Timestamp  int64        `json:"timestamp" dynamodbav:"timestamp"`
+	CreatedAt  string       `json:"created_at" dynamodbav:"timestamp"`
 	SignerStep *SignerStep  `json:"sign_step" dynamodbav:"sign_step,omitempty"`
 	Error      *SignerError `json:"error" dynamodbav:"error"`
 }
@@ -66,7 +66,7 @@ func (s *SignRequest) SetSignerStatus(step SignerStep, err *SignerError) {
 	}
 
 	history := RequestHistoryEntry{
-		Timestamp:  time.Now().Unix(),
+		CreatedAt:  time.Now().UTC().Format(time.RFC3339),
 		SignerStep: &step,
 		Error:      err,
 	}

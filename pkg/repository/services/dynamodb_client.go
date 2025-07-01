@@ -8,12 +8,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-func NewDynamoDBClient(ctx context.Context, table string) (*dynamodb.Client, *DynamoDBEndpointResolver, error) {
-	resolver := &DynamoDBEndpointResolver{}
+func NewDynamoDBClient(ctx context.Context, table string) (*dynamodb.Client, error) {
 	loadConfig := config.LoadDefaultConfig
 	cfg, err := loadConfig(ctx, func(o *config.LoadOptions) error {
 		if endpoint := os.Getenv("DYNAMODB_ENDPOINT"); endpoint != "" {
-			resolver = &DynamoDBEndpointResolver{
+			resolver := &DynamoDBEndpointResolver{
 				EndpointURL: endpoint,
 				TableName:   table,
 			}
@@ -23,10 +22,10 @@ func NewDynamoDBClient(ctx context.Context, table string) (*dynamodb.Client, *Dy
 	})
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	client := dynamodb.NewFromConfig(cfg)
 
-	return client, resolver, err
+	return client, err
 }

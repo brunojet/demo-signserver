@@ -17,11 +17,11 @@ func TestSignerError(t *testing.T) {
 func TestRequestHistoryEntry(t *testing.T) {
 	step := SignerStepCreated
 	hist := RequestHistoryEntry{
-		Timestamp:  123456,
+		CreatedAt:  "123456",
 		SignerStep: &step,
 		Error:      &SignerError{Code: "E2", Message: "fail"},
 	}
-	assert.Equal(t, int64(123456), hist.Timestamp)
+	assert.Equal(t, "123456", hist.CreatedAt)
 	assert.Equal(t, SignerStepCreated, *hist.SignerStep)
 	assert.Equal(t, "E2", hist.Error.Code)
 }
@@ -30,7 +30,7 @@ func TestSignRequest_Fields(t *testing.T) {
 	profileID := "pid"
 	status := SignerStepSigned
 	file := &BucketInfo{BucketName: "b", ObjectKey: "o", Size: 1, SHA256: "s"}
-	hist := []RequestHistoryEntry{{Timestamp: 1}}
+	hist := []RequestHistoryEntry{{CreatedAt: "1"}}
 	// signer := "" // Remove this line since Signer expects *Signer, not *string
 	sr := &SignRequest{
 		BaseDomain:      domain.BaseDomain{},

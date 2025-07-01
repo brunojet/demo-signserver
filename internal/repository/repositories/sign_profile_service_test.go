@@ -1,7 +1,9 @@
 package repositories
 
 import (
+	"context"
 	"demo-signserver/internal/repository/domain"
+	db_services "demo-signserver/pkg/repository/services"
 	"os"
 	"testing"
 )
@@ -13,7 +15,9 @@ func init() {
 	os.Setenv("DYNAMODB_ENDPOINT", "http://localhost:8001")
 	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
-	os.Setenv("DELETE_TABLE", "true")
+	db := db_services.NewDB("Dummy")
+	db.DeleteTable(context.TODO(), "profile")
+	db.CreateTable(context.TODO(), "profile", "profile_id")
 }
 
 func TestSignProfileService_CRUD(t *testing.T) {

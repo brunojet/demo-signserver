@@ -2,6 +2,7 @@ package db_services
 
 import (
 	"context"
+	"log"
 	"os"
 	"testing"
 
@@ -17,14 +18,29 @@ func init() {
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
 }
 
-func getTestDynamoDBClientAndResolver(tableName string) (*dynamodb.Client, *DynamoDBEndpointResolver, error) {
-	client, resolver, err := NewDynamoDBClient(context.TODO(), tableName)
-	return client, resolver, err
+func getTestDynamoDBClient(tableName string, sk string) (*dynamodb.Client, error) {
+	InitTestTable(tableName, sk)
+	client, err := NewDynamoDBClient(context.TODO(), tableName)
+	return client, err
+}
+
+func InitTestTable(tableName string, sk string) {
+	db := NewDB(tableName)
+	err := db.DeleteTable(context.TODO(), tableName)
+
+	if err != nil {
+		log.Fatalf("Error deleting table %s: %v", tableName, err)
+	}
+	err = db.CreateTable(context.TODO(), tableName, sk)
+
+	if err != nil {
+		log.Fatalf("Error creating table %s: %v", tableName, err)
+	}
 }
 
 func TestNewDynamoDBClient_Success(t *testing.T) {
 	os.Setenv("DYNAMODB_ENDPOINT", "http://localhost:8001")
-	client, _, err := getTestDynamoDBClientAndResolver("TestTable")
+	client, err := getTestDynamoDBClient("TestTable", "")
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 }

@@ -33,8 +33,8 @@ func TestCreateSignRequestDTO_GetDomainCreateSignRequest(t *testing.T) {
 		if entry.Error != nil {
 			t.Errorf("Expected first history error to be nil, got %v", entry.Error)
 		}
-		if entry.Timestamp == 0 {
-			t.Errorf("Expected first history timestamp to be set, got 0")
+		if entry.CreatedAt == "" {
+			t.Errorf("Expected first history timestamp to be set, got empty")
 		}
 	}
 }

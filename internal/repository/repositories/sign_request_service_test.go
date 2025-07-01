@@ -1,10 +1,12 @@
 package repositories
 
 import (
+	"context"
 	"os"
 	"testing"
 
 	"demo-signserver/internal/repository/domain"
+	db_services "demo-signserver/pkg/repository/services"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -16,11 +18,13 @@ func init() {
 	os.Setenv("DYNAMODB_ENDPOINT", "http://localhost:8001")
 	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
-	os.Setenv("DELETE_TABLE", "true")
+	db := db_services.NewDB("Dummy")
+	db.DeleteTable(context.TODO(), "request")
+	db.CreateTable(context.TODO(), "request", "")
+
 }
 
 func setupSignRequestServiceTest() *SignRequestService {
-	os.Setenv("SIGN_REQUEST_TABLE", "SignRequestTestTable")
 	return NewSignRequestService()
 }
 
