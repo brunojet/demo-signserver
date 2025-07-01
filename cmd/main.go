@@ -13,6 +13,8 @@ func main() {
 
 	// Rotas de perfil
 	http_handlers.RegisterProfileRoutes(r)
+	// Rotas de request
+	http_handlers.RegisterRequestRoutes(r)
 
 	port := os.Getenv("PORT")
 	if port == "" {

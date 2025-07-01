@@ -25,14 +25,14 @@ func init() {
 	os.Setenv("DELETE_TABLE", "true")
 }
 
-func setupRouter() *gin.Engine {
+func SetupProfileRouter() *gin.Engine {
 	r := gin.Default()
 	RegisterProfileRoutes(r)
 	return r
 }
 
 func TestCreateProfile_ValidationError(t *testing.T) {
-	r := setupRouter()
+	r := SetupProfileRouter()
 	w := httptest.NewRecorder()
 	body := bytes.NewBufferString(`{}`) // corpo vazio, deve falhar
 	req, _ := http.NewRequest("POST", "/profiles", body)
@@ -42,7 +42,7 @@ func TestCreateProfile_ValidationError(t *testing.T) {
 }
 
 func TestCreateProfile_Success(t *testing.T) {
-	r := setupRouter()
+	r := SetupProfileRouter()
 	w := httptest.NewRecorder()
 	profile := dtos.CreateSignerProfileDTO{
 		Signer:      "positivo",
@@ -60,7 +60,7 @@ func TestCreateProfile_Success(t *testing.T) {
 }
 
 func TestGetProfileByID_NotFound(t *testing.T) {
-	r := setupRouter()
+	r := SetupProfileRouter()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/profiles/999", nil)
 	r.ServeHTTP(w, req)
@@ -69,7 +69,7 @@ func TestGetProfileByID_NotFound(t *testing.T) {
 }
 
 func TestUpdateProfile_ValidationError(t *testing.T) {
-	r := setupRouter()
+	r := SetupProfileRouter()
 	w := httptest.NewRecorder()
 	body := bytes.NewBufferString(`{}`) // corpo vazio, mas PATCH permite update parcial, então deve aceitar
 	req, _ := http.NewRequest("PATCH", "/profiles/123", body)
@@ -80,7 +80,7 @@ func TestUpdateProfile_ValidationError(t *testing.T) {
 }
 
 func TestUpdateProfile_Success(t *testing.T) {
-	r := setupRouter()
+	r := SetupProfileRouter()
 	w := httptest.NewRecorder()
 	// Primeiro cria o perfil
 	profile := dtos.CreateSignerProfileDTO{
