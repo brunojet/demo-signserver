@@ -13,7 +13,7 @@ import (
 func init() {
 	os.Setenv("PROJECT_NAME", "signserver")
 	os.Setenv("ENVIRONMENT", "dev")
-	os.Setenv("DYNAMODB_ENDPOINT", testResolverEndpoint)
+	os.Setenv("DYNAMODB_ENDPOINT", "http://localhost:8001")
 	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
 }

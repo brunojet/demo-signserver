@@ -30,16 +30,12 @@ func NewDynamoDBClient(ctx context.Context, table string) (*dynamodb.Client, err
 		return nil, err
 	}
 
-	var client *dynamodb.Client
-
-	if endpoint := os.Getenv("DYNAMODB_ENDPOINT"); endpoint != "" {
-		client = dynamodb.NewFromConfig(cfg, func(optFns *dynamodb.Options) {
+	client := dynamodb.NewFromConfig(cfg, func(optFns *dynamodb.Options) {
+		if endpoint := os.Getenv("DYNAMODB_ENDPOINT"); endpoint != "" {
 			optFns.BaseEndpoint = aws.String(endpoint)
 			optFns.EndpointResolverV2 = &resolverV2{}
-		})
-	} else {
-		client = dynamodb.NewFromConfig(cfg)
-	}
+		}
+	})
 
 	return client, err
 }
