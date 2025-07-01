@@ -27,15 +27,15 @@ const (
 
 // SignerError representa um erro ocorrido em um passo do fluxo.
 type SignerError struct {
-	Code    string `dynamodbav:"code"`
-	Message string `dynamodbav:"message"`
+	Code    string `json:"code" dynamodbav:"code"`
+	Message string `json:"message" dynamodbav:"message"`
 }
 
 // IntentHistoryEntry representa um registro de histórico de um passo do fluxo.
 type RequestHistoryEntry struct {
-	Timestamp  int64        `dynamodbav:"timestamp"`
-	SignerStep *SignerStep  `dynamodbav:"sign_step,omitempty"`
-	Error      *SignerError `dynamodbav:"error"`
+	Timestamp  int64        `json:"timestamp" dynamodbav:"timestamp"`
+	SignerStep *SignerStep  `json:"sign_step" dynamodbav:"sign_step,omitempty"`
+	Error      *SignerError `json:"error" dynamodbav:"error"`
 }
 
 type SignerRequestInerface interface {
@@ -46,15 +46,15 @@ type SignerRequestInerface interface {
 // SignRequest representa a entidade de intenção de assinatura.
 type SignRequest struct {
 	domain.BaseDomain
-	SignerProfileId *string                `dynamodbav:"signer_profile_id,omitempty"`
-	SignerStatus    *SignerStep            `dynamodbav:"signer_status,omitempty"`
-	UnsignedFile    *BucketInfo            `dynamodbav:"unsigned_file,omitempty"`
-	SignedFile      *BucketInfo            `dynamodbav:"signed_file,omitempty"`
-	WebhookURL      *string                `dynamodbav:"webhook_url,omitempty"`
-	History         *[]RequestHistoryEntry `dynamodbav:"history,omitempty"`
+	SignerProfileId *string                `json:"profile_id,omitempty" dynamodbav:"signer_profile_id,omitempty"`
+	SignerStatus    *SignerStep            `json:"signer_status,omitempty" dynamodbav:"signer_status,omitempty"`
+	UnsignedFile    *BucketInfo            `json:"unsigned_file,omitempty" dynamodbav:"unsigned_file,omitempty"`
+	SignedFile      *BucketInfo            `json:"signed_file,omitempty" dynamodbav:"signed_file,omitempty"`
+	WebhookURL      *string                `json:"webhook_url,omitempty" dynamodbav:"webhook_url,omitempty"`
+	History         *[]RequestHistoryEntry `json:"history,omitempty" dynamodbav:"history,omitempty"`
 }
 
-func (s *SignRequest) SetSignerStatus(step SignerStep, err SignerError) {
+func (s *SignRequest) SetSignerStatus(step SignerStep, err *SignerError) {
 	if s.SignerStatus == nil {
 		s.SignerStatus = &step
 	} else {
@@ -68,7 +68,7 @@ func (s *SignRequest) SetSignerStatus(step SignerStep, err SignerError) {
 	history := RequestHistoryEntry{
 		Timestamp:  time.Now().Unix(),
 		SignerStep: &step,
-		Error:      &err,
+		Error:      err,
 	}
 	*s.History = append(*s.History, history)
 }

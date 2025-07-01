@@ -10,6 +10,8 @@ info:
 tags:
   - name: Profile
     description: Operações relacionadas a perfis de assinatura digital
+  - name: Request
+    description: Operações relacionadas a requisições de assinatura digital
 servers:
   - url: http://localhost:8080
 paths:
@@ -98,6 +100,83 @@ paths:
           description: Perfil não encontrado
         '500':
           description: Erro interno
+  /requests:
+    post:
+      tags: [Request]
+      summary: Cria uma nova requisição de assinatura
+      description: Cria uma nova intenção de assinatura digital.
+      operationId: createSignRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSignRequestDTO'
+      responses:
+        '201':
+          description: Requisição criada com sucesso
+          headers:
+            Location:
+              description: URL do recurso criado
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSignResponseDTO'
+        '400':
+          description: Requisição inválida
+        '500':
+          description: Erro interno
+    get:
+      tags: [Request]
+      summary: Lista todas as requisições (não implementado)
+      operationId: listSignRequests
+      responses:
+        '501':
+          description: Não implementado
+  /requests/{id}:
+    get:
+      tags: [Request]
+      summary: Consulta status de uma requisição de assinatura por ID
+      description: Retorna o status de uma requisição de assinatura digital pelo ID.
+      operationId: getSignerStatusById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSignResponseDTO'
+        '404':
+          description: Requisição não encontrada
+  /mamange_requests/{id}:
+    get:
+      tags: [Request]
+      summary: Consulta completa de uma requisição de assinatura por ID
+      description: Retorna todos os dados de uma requisição de assinatura digital pelo ID.
+      operationId: getSignRequestById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Requisição encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSignResponseDTO'
+        '404':
+          description: Requisição não encontrada
 components:
   schemas:
     CreateSignerProfileDTO:
@@ -170,3 +249,47 @@ components:
           type: integer
         interval:
           type: integer
+    CreateSignRequestDTO:
+      type: object
+      required:
+        - profile_id
+      properties:
+        profile_id:
+          type: string
+        callback_url:
+          type: string
+          format: url
+    CreateSignResponseDTO:
+      type: object
+      required:
+        - id
+        - pre_signed_url
+      properties:
+        id:
+          type: string
+        pre_signed_url:
+          type: string
+          format: url
+    GetSignResponseDTO:
+      type: object
+      required:
+        - id
+        - signer_status
+        - pre_signed_url
+      properties:
+        id:
+          type: string
+        signer_status:
+          type: string
+        signer_error:
+          $ref: '#/components/schemas/SignerError'
+        pre_signed_url:
+          type: string
+          format: url
+    SignerError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string

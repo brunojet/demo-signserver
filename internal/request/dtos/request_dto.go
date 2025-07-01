@@ -15,12 +15,14 @@ type CreateSignResponseDTO struct {
 }
 
 func (d *CreateSignRequestDTO) GetDomainCreateSignRequest() *domain.SignRequest {
-	signerStatus := domain.SignerStepCreated
-	return &domain.SignRequest{
+	domainReq := domain.SignRequest{
 		SignerProfileId: &d.ProfileId,
-		SignerStatus:    &signerStatus,
 		WebhookURL:      d.WebhookURL,
 	}
+
+	domainReq.SetSignerStatus(domain.SignerStepCreated, nil)
+	return &domainReq
+
 }
 
 type GetResponseDTO struct {

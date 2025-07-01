@@ -42,10 +42,24 @@ func (h *RequestHandler) GetRequestByID(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+func (h *RequestHandler) GetSignerStatusByID(c *gin.Context) {
+	id := c.Param("id")
+	response, err := h.Service.GetSignerStatusByID(id)
+	if err != nil || response == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Request not found"})
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
 func (h *RequestHandler) RegisterRoutes(r *gin.Engine) {
 	requests := r.Group("/requests")
 	{
 		requests.POST("", h.CreateRequest)
+		requests.GET(":id", h.GetSignerStatusByID)
+	}
+	requests = r.Group("/mamange_requests")
+	{
 		requests.GET(":id", h.GetRequestByID)
 	}
 }

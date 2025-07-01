@@ -55,7 +55,7 @@ func TestSignRequest_SetSignerStatus_NewHistoryAndStatus(t *testing.T) {
 	step := SignerStepSigning
 	err := SignerError{Code: "E3", Message: "error msg"}
 
-	sr.SetSignerStatus(step, err)
+	sr.SetSignerStatus(step, &err)
 
 	assert.NotNil(t, sr.SignerStatus)
 	assert.Equal(t, step, *sr.SignerStatus)
@@ -71,11 +71,11 @@ func TestSignRequest_SetSignerStatus_AppendHistory(t *testing.T) {
 	sr := &SignRequest{}
 	firstStep := SignerStepCreated
 	firstErr := SignerError{Code: "E1", Message: "msg1"}
-	sr.SetSignerStatus(firstStep, firstErr)
+	sr.SetSignerStatus(firstStep, &firstErr)
 
 	secondStep := SignerStepSigned
 	secondErr := SignerError{Code: "E2", Message: "msg2"}
-	sr.SetSignerStatus(secondStep, secondErr)
+	sr.SetSignerStatus(secondStep, &secondErr)
 
 	assert.NotNil(t, sr.SignerStatus)
 	assert.Equal(t, secondStep, *sr.SignerStatus)

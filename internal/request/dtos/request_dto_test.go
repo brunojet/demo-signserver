@@ -23,6 +23,20 @@ func TestCreateSignRequestDTO_GetDomainCreateSignRequest(t *testing.T) {
 	if domainObj.WebhookURL == nil || *domainObj.WebhookURL != webhook {
 		t.Errorf("Expected WebhookURL %s, got %v", webhook, domainObj.WebhookURL)
 	}
+	if domainObj.History == nil || len(*domainObj.History) != 1 {
+		t.Errorf("Expected History with 1 entry, got %v", domainObj.History)
+	} else {
+		entry := (*domainObj.History)[0]
+		if entry.SignerStep == nil || *entry.SignerStep != domain.SignerStepCreated {
+			t.Errorf("Expected first history step to be %s, got %v", domain.SignerStepCreated, entry.SignerStep)
+		}
+		if entry.Error != nil {
+			t.Errorf("Expected first history error to be nil, got %v", entry.Error)
+		}
+		if entry.Timestamp == 0 {
+			t.Errorf("Expected first history timestamp to be set, got 0")
+		}
+	}
 }
 
 func TestCreateSignResponseDTO_JSONTags(t *testing.T) {
