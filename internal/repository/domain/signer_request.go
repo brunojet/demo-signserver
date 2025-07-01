@@ -72,3 +72,17 @@ func (s *SignRequest) SetSignerStatus(step SignerStep, err SignerError) {
 	}
 	*s.History = append(*s.History, history)
 }
+
+func (s *SignRequest) GetLastError() *SignerError {
+	if s.History == nil || len(*s.History) == 0 {
+		return nil
+	}
+	// Percorre do mais recente para o mais antigo
+	for i := len(*s.History) - 1; i >= 0; i-- {
+		h := (*s.History)[i]
+		if h.SignerStep != nil && *h.SignerStep == SignerStepSigningFailed {
+			return h.Error
+		}
+	}
+	return nil
+}

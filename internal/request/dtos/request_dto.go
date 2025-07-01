@@ -29,3 +29,16 @@ type GetResponseDTO struct {
 	SignerError  *domain.SignerError `json:"signer_error,omitempty"`
 	DownloadURL  *string             `json:"pre_signed_url" binding:"required,url"`
 }
+
+func NewGetResponseDTOFromDomain(req *domain.SignRequest, downloadUrl *string) *GetResponseDTO {
+	if req == nil {
+		return nil
+	}
+
+	return &GetResponseDTO{
+		ID:           req.ID,
+		SignerStatus: *req.SignerStatus,
+		SignerError:  req.GetLastError(),
+		DownloadURL:  downloadUrl,
+	}
+}

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"demo-signserver/pkg/repository/domain"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -84,4 +85,44 @@ func TestSignRequest_SetSignerStatus_AppendHistory(t *testing.T) {
 	assert.Equal(t, secondStep, *last.SignerStep)
 	assert.Equal(t, secondErr.Code, last.Error.Code)
 	assert.Equal(t, secondErr.Message, last.Error.Message)
+}
+
+func TestSignRequest_GetLastError(t *testing.T) {
+	errMsg := "erro de assinatura"
+	errCode := "E123"
+	err := &SignerError{Code: errCode, Message: errMsg}
+	stepOk := SignerStepSigned
+	stepFail := SignerStepSigningFailed
+
+	history := []RequestHistoryEntry{
+		{SignerStep: &stepOk, Error: nil},
+		{SignerStep: &stepFail, Error: err},
+	}
+
+	req := &SignRequest{
+		History: &history,
+	}
+
+	got := req.GetLastError()
+	if !reflect.DeepEqual(got, err) {
+		t.Errorf("Expected error %+v, got %+v", err, got)
+	}
+
+	// Testa sem erro
+	req2 := &SignRequest{History: &[]RequestHistoryEntry{{SignerStep: &stepOk, Error: nil}}}
+	if req2.GetLastError() != nil {
+		t.Errorf("Expected nil, got %+v", req2.GetLastError())
+	}
+
+	// Testa com history vazio
+	req3 := &SignRequest{History: &[]RequestHistoryEntry{}}
+	if req3.GetLastError() != nil {
+		t.Errorf("Expected nil, got %+v", req3.GetLastError())
+	}
+
+	// Testa com history nil
+	req4 := &SignRequest{}
+	if req4.GetLastError() != nil {
+		t.Errorf("Expected nil, got %+v", req4.GetLastError())
+	}
 }
