@@ -2,6 +2,8 @@ package db_services
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -10,5 +12,7 @@ var (
 )
 
 func TestDynamoDBEndpointResolver_EnsureTableExists(t *testing.T) {
-	getTestDynamoDBClient(testResolverTableName, "sk")
+	client, err := getTestDynamoDBClient(testResolverTableName, "sk")
+	assert.NoError(t, err)
+	assert.NotNil(t, client)
 }

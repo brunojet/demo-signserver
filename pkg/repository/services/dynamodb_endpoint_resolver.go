@@ -1,3 +1,4 @@
+// nolint
 package db_services
 
 import (

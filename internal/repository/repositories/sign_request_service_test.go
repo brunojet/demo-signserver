@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"log"
 	"os"
 	"testing"
 
@@ -19,9 +20,12 @@ func init() {
 	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
 	db := db_services.NewDB("Dummy")
-	db.DeleteTable(context.TODO(), "request")
-	db.CreateTable(context.TODO(), "request", "")
-
+	if err := db.DeleteTable(context.TODO(), "request"); err != nil {
+		log.Fatalf("Error deleting table request: %v", err)
+	}
+	if err := db.CreateTable(context.TODO(), "request", ""); err != nil {
+		log.Fatalf("Error creating table request: %v", err)
+	}
 }
 
 func setupSignRequestServiceTest() *SignRequestService {

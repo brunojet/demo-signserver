@@ -19,12 +19,12 @@ func init() {
 }
 
 func getTestDynamoDBClient(tableName string, sk string) (*dynamodb.Client, error) {
-	InitTestTable(tableName, sk)
+	initTestTable(tableName, sk)
 	client, err := NewDynamoDBClient(context.TODO(), tableName)
 	return client, err
 }
 
-func InitTestTable(tableName string, sk string) {
+func initTestTable(tableName string, sk string) {
 	db := NewDB(tableName)
 	err := db.DeleteTable(context.TODO(), tableName)
 

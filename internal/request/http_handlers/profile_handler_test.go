@@ -33,8 +33,12 @@ func init() {
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
 	os.Setenv("SIGN_PROFILE_TABLE", ProfileTable_2)
 	db := db_services.NewDB("Dummy")
-	db.DeleteTable(context.TODO(), ProfileTable_2)
-	db.CreateTable(context.TODO(), ProfileTable_2, "profile_id")
+	if err := db.DeleteTable(context.TODO(), ProfileTable_2); err != nil {
+		log.Fatalf("Error deleting table request: %v", err)
+	}
+	if err := db.CreateTable(context.TODO(), ProfileTable_2, ""); err != nil {
+		log.Fatalf("Error creating table request: %v", err)
+	}
 	handler := NewProfileHandler(services.NewProfileService())
 	handler.RegisterRoutes(rProfile)
 	log.Println("RequestHandler initialized")
@@ -102,7 +106,8 @@ func TestUpdateProfile_Success(t *testing.T) {
 
 	// Extrai o id da resposta
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
 	id := resp["id"].(string)
 
 	// Agora faz o update

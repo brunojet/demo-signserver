@@ -4,6 +4,7 @@ import (
 	"context"
 	"demo-signserver/pkg/repository/domain"
 	"fmt"
+	"log"
 	"os"
 	"testing"
 
@@ -16,13 +17,11 @@ var (
 )
 
 func init() {
-	getTestDynamoDBClient(tableNameService, "")
+	initTestTable(tableNameService, "")
 	var err error
 	service, err = NewDynamoDBService(tableNameService, "pk", "")
-
 	if err != nil {
-		fmt.Printf("Error initializing DynamoDB service: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error initializing DynamoDB service: %v\n", err)
 	}
 }
 
