@@ -2,30 +2,44 @@ package db_services
 
 import (
 	"context"
+	"fmt"
 	"os"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	smithyendpoints "github.com/aws/smithy-go/endpoints"
 )
 
+type resolverV2 struct{}
+
+func (*resolverV2) ResolveEndpoint(ctx context.Context, params dynamodb.EndpointParameters) (
+	smithyendpoints.Endpoint, error,
+) {
+	// s3.Options.BaseEndpoint is accessible here:
+	fmt.Printf("The endpoint provided in config is %s\n", *params.Endpoint)
+
+	// fallback to default
+	return dynamodb.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, params)
+}
+
 func NewDynamoDBClient(ctx context.Context, table string) (*dynamodb.Client, error) {
-	loadConfig := config.LoadDefaultConfig
-	cfg, err := loadConfig(ctx, func(o *config.LoadOptions) error {
-		if endpoint := os.Getenv("DYNAMODB_ENDPOINT"); endpoint != "" {
-			resolver := &DynamoDBEndpointResolver{
-				EndpointURL: endpoint,
-				TableName:   table,
-			}
-			o.EndpointResolverWithOptions = resolver
-		}
-		return nil
-	})
+	cfg, err := config.LoadDefaultConfig(ctx)
 
 	if err != nil {
 		return nil, err
 	}
 
-	client := dynamodb.NewFromConfig(cfg)
+	var client *dynamodb.Client
+
+	if endpoint := os.Getenv("DYNAMODB_ENDPOINT"); endpoint != "" {
+		client = dynamodb.NewFromConfig(cfg, func(optFns *dynamodb.Options) {
+			optFns.BaseEndpoint = aws.String(endpoint)
+			optFns.EndpointResolverV2 = &resolverV2{}
+		})
+	} else {
+		client = dynamodb.NewFromConfig(cfg)
+	}
 
 	return client, err
 }
