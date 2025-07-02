@@ -33,10 +33,10 @@ func init() {
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
 	os.Setenv("SIGN_PROFILE_TABLE", ProfileTable_2)
 	db := db_services.NewDB("Dummy")
-	if err := db.DeleteTable(context.TODO(), ProfileTable_2); err != nil {
+	if err := db.DeleteTable(context.Background(), ProfileTable_2); err != nil {
 		log.Fatalf("Error deleting table request: %v", err)
 	}
-	if err := db.CreateTable(context.TODO(), ProfileTable_2, ""); err != nil {
+	if err := db.CreateTable(context.Background(), ProfileTable_2, ""); err != nil {
 		log.Fatalf("Error creating table request: %v", err)
 	}
 	handler := NewProfileHandler(services.NewProfileService())

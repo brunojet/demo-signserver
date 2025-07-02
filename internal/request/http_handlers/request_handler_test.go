@@ -33,16 +33,16 @@ func init() {
 	os.Setenv("SIGN_PROFILE_TABLE", ProfileTable_2)
 	os.Setenv("SIGN_REQUEST_TABLE", RequestTable_2)
 	db := db_services.NewDB("Dummy")
-	if err := db.DeleteTable(context.TODO(), ProfileTable_2); err != nil {
+	if err := db.DeleteTable(context.Background(), ProfileTable_2); err != nil {
 		log.Fatalf("Error deleting table profile: %v", err)
 	}
-	if err := db.DeleteTable(context.TODO(), RequestTable_2); err != nil {
+	if err := db.DeleteTable(context.Background(), RequestTable_2); err != nil {
 		log.Fatalf("Error deleting table request: %v", err)
 	}
-	if err := db.CreateTable(context.TODO(), ProfileTable_2, "profile_id"); err != nil {
+	if err := db.CreateTable(context.Background(), ProfileTable_2, "profile_id"); err != nil {
 		log.Fatalf("Error creating table profile: %v", err)
 	}
-	if err := db.CreateTable(context.TODO(), RequestTable_2, ""); err != nil {
+	if err := db.CreateTable(context.Background(), RequestTable_2, ""); err != nil {
 		log.Fatalf("Error creating table request: %v", err)
 	}
 	handler := NewRequestHandler(services.NewRequestService())

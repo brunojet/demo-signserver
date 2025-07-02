@@ -31,12 +31,12 @@ func NewSignProfileService() *SignProfileService {
 }
 
 func (s *SignProfileService) CreateProfile(profile *domain.SignerProfile) (string, error) {
-	return s.Dynamo.CreateItem(context.TODO(), profile)
+	return s.Dynamo.CreateItem(context.Background(), profile)
 }
 
 func (s *SignProfileService) GetProfileByID(ID string) (*domain.SignerProfile, error) {
 	var profile domain.SignerProfile
-	err := s.Dynamo.GetItem(context.TODO(), ID, &profile)
+	err := s.Dynamo.GetItem(context.Background(), ID, &profile)
 	if err != nil {
 		return nil, err
 	}
@@ -44,5 +44,5 @@ func (s *SignProfileService) GetProfileByID(ID string) (*domain.SignerProfile, e
 }
 
 func (s *SignProfileService) UpdateProfile(ID string, profile *domain.SignerProfile) error {
-	return s.Dynamo.UpdateItem(context.TODO(), ID, profile)
+	return s.Dynamo.UpdateItem(context.Background(), ID, profile)
 }

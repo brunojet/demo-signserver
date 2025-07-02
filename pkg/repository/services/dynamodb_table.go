@@ -15,7 +15,7 @@ type DBServices struct {
 }
 
 func NewDB(table string) *DBServices {
-	client, err := NewDynamoDBClient(context.TODO(), buildTableName(table))
+	client, err := NewDynamoDBClient(context.Background(), buildTableName(table))
 	if err != nil {
 		panic(fmt.Sprintf("failed to create DynamoDB client: %v", err))
 	}

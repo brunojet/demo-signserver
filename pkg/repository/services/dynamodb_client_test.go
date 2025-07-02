@@ -20,18 +20,18 @@ func init() {
 
 func getTestDynamoDBClient(tableName string, sk string) (*dynamodb.Client, error) {
 	initTestTable(tableName, sk)
-	client, err := NewDynamoDBClient(context.TODO(), tableName)
+	client, err := NewDynamoDBClient(context.Background(), tableName)
 	return client, err
 }
 
 func initTestTable(tableName string, sk string) {
 	db := NewDB(tableName)
-	err := db.DeleteTable(context.TODO(), tableName)
+	err := db.DeleteTable(context.Background(), tableName)
 
 	if err != nil {
 		log.Fatalf("Error deleting table %s: %v", tableName, err)
 	}
-	err = db.CreateTable(context.TODO(), tableName, sk)
+	err = db.CreateTable(context.Background(), tableName, sk)
 
 	if err != nil {
 		log.Fatalf("Error creating table %s: %v", tableName, err)

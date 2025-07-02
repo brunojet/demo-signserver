@@ -17,10 +17,10 @@ func init() {
 	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
 	db := db_services.NewDB("Dummy")
-	if err := db.DeleteTable(context.TODO(), "profile"); err != nil {
+	if err := db.DeleteTable(context.Background(), "profile"); err != nil {
 		log.Fatalf("Error deleting table request: %v", err)
 	}
-	if err := db.CreateTable(context.TODO(), "profile", "profile_id"); err != nil {
+	if err := db.CreateTable(context.Background(), "profile", "profile_id"); err != nil {
 		log.Fatalf("Error creating table request: %v", err)
 	}
 }

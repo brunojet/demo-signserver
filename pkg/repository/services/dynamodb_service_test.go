@@ -34,7 +34,7 @@ func TestDynamoDBService_CreateItem(t *testing.T) {
 	service, err := NewDynamoDBService(tableNameService, "name", "")
 	assert.NoError(t, err)
 	item := Item{Name: pk_value}
-	_, err = service.CreateItem(context.TODO(), &item)
+	_, err = service.CreateItem(context.Background(), &item)
 	assert.NoError(t, err)
 }
 
@@ -47,10 +47,10 @@ func TestDynamoDBService_CreateItem_Error(t *testing.T) {
 	service, err := NewDynamoDBService(tableNameService, "name", "")
 	assert.NoError(t, err)
 	item := Item{Name: pk_value}
-	_, err = service.CreateItem(context.TODO(), &item)
+	_, err = service.CreateItem(context.Background(), &item)
 	assert.NoError(t, err)
 
-	_, err = service.CreateItem(context.TODO(), &item)
+	_, err = service.CreateItem(context.Background(), &item)
 	assert.Error(t, err)
 
 }
@@ -63,9 +63,9 @@ func TestDynamoDBService_GetItem(t *testing.T) {
 	}
 
 	item := Item{PK: pk_value}
-	ID, _ := service.CreateItem(context.TODO(), &item)
+	ID, _ := service.CreateItem(context.Background(), &item)
 	var out Item
-	err := service.GetItem(context.TODO(), ID, &out)
+	err := service.GetItem(context.Background(), ID, &out)
 	assert.NoError(t, err)
 	assert.Equal(t, ID, out.PK)
 }
@@ -78,9 +78,9 @@ func TestDynamoDBService_GetItem_Error(t *testing.T) {
 	}
 
 	item := Item{PK: pk_value}
-	ID, _ := service.CreateItem(context.TODO(), &item)
+	ID, _ := service.CreateItem(context.Background(), &item)
 	var out Item
-	err := service.GetItem(context.TODO(), ID+"1", &out)
+	err := service.GetItem(context.Background(), ID+"1", &out)
 	assert.Error(t, err)
 }
 
@@ -93,17 +93,17 @@ func TestDynamoDBService_UpdateItem(t *testing.T) {
 	}
 
 	item := Item{PK: pk_value, Name: "original"}
-	ID, err := service.CreateItem(context.TODO(), &item)
+	ID, err := service.CreateItem(context.Background(), &item)
 	assert.NoError(t, err)
 
 	// Atualiza campo Name
 	update := Item{Name: "updated"}
-	err = service.UpdateItem(context.TODO(), ID, &update)
+	err = service.UpdateItem(context.Background(), ID, &update)
 	assert.NoError(t, err)
 
 	// Busca e valida
 	var out Item
-	err = service.GetItem(context.TODO(), ID, &out)
+	err = service.GetItem(context.Background(), ID, &out)
 	assert.NoError(t, err)
 	assert.Equal(t, ID, out.PK)
 	assert.Equal(t, "updated", out.Name)
@@ -118,12 +118,12 @@ func TestDynamoDBService_UpdateItem_Error(t *testing.T) {
 	}
 
 	item := Item{PK: pk_value, Name: "original"}
-	ID, err := service.CreateItem(context.TODO(), &item)
+	ID, err := service.CreateItem(context.Background(), &item)
 	assert.NoError(t, err)
 
 	// Atualiza campo Name
 	update := Item{Name: "updated"}
-	err = service.UpdateItem(context.TODO(), ID+"1", &update)
+	err = service.UpdateItem(context.Background(), ID+"1", &update)
 	assert.Error(t, err)
 }
 
