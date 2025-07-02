@@ -2,7 +2,7 @@
 // Source: sign_profile_service.go
 
 // Package services is a generated GoMock package.
-package services
+package repositories
 
 import (
 	domain "demo-signserver/internal/repository/domain"

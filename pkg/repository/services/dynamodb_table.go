@@ -4,14 +4,34 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
+type DBServices struct {
+	Client *dynamodb.Client
+}
+
+func NewDB(table string) *DBServices {
+	client, err := NewDynamoDBClient(context.Background(), buildTableName(table))
+	if err != nil {
+		panic(fmt.Sprintf("failed to create DynamoDB client: %v", err))
+	}
+
+	return &DBServices{Client: client}
+}
+
+func buildTableName(table string) string {
+	project := os.Getenv("PROJECT_NAME")
+	env := os.Getenv("ENVIRONMENT")
+	return fmt.Sprintf("%s-%s-%s", project, env, table)
+}
+
 // TableExists retorna true se a tabela existe, false se não existe, ou erro se outro erro.
-func TableExists(ctx context.Context, client *dynamodb.Client, table string) bool {
-	_, err := client.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
+func (db *DBServices) tableExists(ctx context.Context, table string) bool {
+	_, err := db.Client.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
 	if err == nil {
 		return true
 	}
@@ -22,13 +42,20 @@ func TableExists(ctx context.Context, client *dynamodb.Client, table string) boo
 	return false
 }
 
+func (db *DBServices) TableExists(ctx context.Context, table string) bool {
+	table = buildTableName(table)
+	return db.tableExists(ctx, table)
+}
+
 // DeleteTable remove a tabela se ela existir (útil para testes).
-func DeleteTable(ctx context.Context, client *dynamodb.Client, table string) error {
-	if !TableExists(ctx, client, table) {
+func (db *DBServices) DeleteTable(ctx context.Context, table string) error {
+	table = buildTableName(table)
+
+	if !db.tableExists(ctx, table) {
 		return nil
 	}
 
-	_, err := client.DeleteTable(ctx, &dynamodb.DeleteTableInput{
+	_, err := db.Client.DeleteTable(ctx, &dynamodb.DeleteTableInput{
 		TableName: &table,
 	})
 
@@ -42,8 +69,10 @@ func DeleteTable(ctx context.Context, client *dynamodb.Client, table string) err
 }
 
 // CreateTable cria uma tabela DynamoDB com pk obrigatória e sk opcional (sempre usando nomes físicos pk/sk).
-func CreateTable(ctx context.Context, client *dynamodb.Client, table string, skKey string) error {
-	if TableExists(ctx, client, table) {
+func (db *DBServices) CreateTable(ctx context.Context, table string, skKey string) error {
+	table = buildTableName(table)
+
+	if db.tableExists(ctx, table) {
 		return nil
 	}
 
@@ -57,7 +86,7 @@ func CreateTable(ctx context.Context, client *dynamodb.Client, table string, skK
 		keySchema = append(keySchema, types.KeySchemaElement{AttributeName: &skPhysical, KeyType: types.KeyTypeRange})
 	}
 
-	_, err := client.CreateTable(ctx, &dynamodb.CreateTableInput{
+	_, err := db.Client.CreateTable(ctx, &dynamodb.CreateTableInput{
 		TableName:            &table,
 		AttributeDefinitions: attrs,
 		KeySchema:            keySchema,

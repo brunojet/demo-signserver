@@ -2,6 +2,7 @@ package domain
 
 import (
 	"demo-signserver/pkg/repository/domain"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,11 +17,11 @@ func TestSignerError(t *testing.T) {
 func TestRequestHistoryEntry(t *testing.T) {
 	step := SignerStepCreated
 	hist := RequestHistoryEntry{
-		Timestamp:  123456,
+		CreatedAt:  "123456",
 		SignerStep: &step,
 		Error:      &SignerError{Code: "E2", Message: "fail"},
 	}
-	assert.Equal(t, int64(123456), hist.Timestamp)
+	assert.Equal(t, "123456", hist.CreatedAt)
 	assert.Equal(t, SignerStepCreated, *hist.SignerStep)
 	assert.Equal(t, "E2", hist.Error.Code)
 }
@@ -29,7 +30,7 @@ func TestSignRequest_Fields(t *testing.T) {
 	profileID := "pid"
 	status := SignerStepSigned
 	file := &BucketInfo{BucketName: "b", ObjectKey: "o", Size: 1, SHA256: "s"}
-	hist := []RequestHistoryEntry{{Timestamp: 1}}
+	hist := []RequestHistoryEntry{{CreatedAt: "1"}}
 	// signer := "" // Remove this line since Signer expects *Signer, not *string
 	sr := &SignRequest{
 		BaseDomain:      domain.BaseDomain{},
@@ -54,7 +55,7 @@ func TestSignRequest_SetSignerStatus_NewHistoryAndStatus(t *testing.T) {
 	step := SignerStepSigning
 	err := SignerError{Code: "E3", Message: "error msg"}
 
-	sr.SetSignerStatus(step, err)
+	sr.SetSignerStatus(step, &err)
 
 	assert.NotNil(t, sr.SignerStatus)
 	assert.Equal(t, step, *sr.SignerStatus)
@@ -70,11 +71,11 @@ func TestSignRequest_SetSignerStatus_AppendHistory(t *testing.T) {
 	sr := &SignRequest{}
 	firstStep := SignerStepCreated
 	firstErr := SignerError{Code: "E1", Message: "msg1"}
-	sr.SetSignerStatus(firstStep, firstErr)
+	sr.SetSignerStatus(firstStep, &firstErr)
 
 	secondStep := SignerStepSigned
 	secondErr := SignerError{Code: "E2", Message: "msg2"}
-	sr.SetSignerStatus(secondStep, secondErr)
+	sr.SetSignerStatus(secondStep, &secondErr)
 
 	assert.NotNil(t, sr.SignerStatus)
 	assert.Equal(t, secondStep, *sr.SignerStatus)
@@ -84,4 +85,44 @@ func TestSignRequest_SetSignerStatus_AppendHistory(t *testing.T) {
 	assert.Equal(t, secondStep, *last.SignerStep)
 	assert.Equal(t, secondErr.Code, last.Error.Code)
 	assert.Equal(t, secondErr.Message, last.Error.Message)
+}
+
+func TestSignRequest_GetLastError(t *testing.T) {
+	errMsg := "erro de assinatura"
+	errCode := "E123"
+	err := &SignerError{Code: errCode, Message: errMsg}
+	stepOk := SignerStepSigned
+	stepFail := SignerStepSigningFailed
+
+	history := []RequestHistoryEntry{
+		{SignerStep: &stepOk, Error: nil},
+		{SignerStep: &stepFail, Error: err},
+	}
+
+	req := &SignRequest{
+		History: &history,
+	}
+
+	got := req.GetLastError()
+	if !reflect.DeepEqual(got, err) {
+		t.Errorf("Expected error %+v, got %+v", err, got)
+	}
+
+	// Testa sem erro
+	req2 := &SignRequest{History: &[]RequestHistoryEntry{{SignerStep: &stepOk, Error: nil}}}
+	if req2.GetLastError() != nil {
+		t.Errorf("Expected nil, got %+v", req2.GetLastError())
+	}
+
+	// Testa com history vazio
+	req3 := &SignRequest{History: &[]RequestHistoryEntry{}}
+	if req3.GetLastError() != nil {
+		t.Errorf("Expected nil, got %+v", req3.GetLastError())
+	}
+
+	// Testa com history nil
+	req4 := &SignRequest{}
+	if req4.GetLastError() != nil {
+		t.Errorf("Expected nil, got %+v", req4.GetLastError())
+	}
 }

@@ -20,7 +20,7 @@ type S3Service struct {
 
 // NewS3ServiceWithConfigLoader permite injetar função de carregamento de config (para testes).
 func NewS3ServiceWithConfigLoader(bucket string, loadConfig func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error)) (*S3Service, error) {
-	cfg, err := loadConfig(context.TODO())
+	cfg, err := loadConfig(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (s *S3Service) GeneratePresignedURL(key string, expires time.Duration) (str
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(key),
 	}
-	presignedReq, err := presignClient.PresignPutObject(context.TODO(), params, func(opts *s3.PresignOptions) {
+	presignedReq, err := presignClient.PresignPutObject(context.Background(), params, func(opts *s3.PresignOptions) {
 		opts.Expires = expires
 	})
 	if err != nil {
@@ -70,7 +70,7 @@ type STSAPI interface {
 
 // Gera credenciais temporárias STS para escrita no S3
 func GenerateTemporaryS3CredentialsWithClient(roleArn, sessionName string, duration time.Duration, loadConfig func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error), stsClientFactory func(cfg aws.Config) STSAPI) (*types.Credentials, error) {
-	cfg, err := loadConfig(context.TODO())
+	cfg, err := loadConfig(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func GenerateTemporaryS3CredentialsWithClient(roleArn, sessionName string, durat
 		RoleSessionName: aws.String(sessionName),
 		DurationSeconds: aws.Int32(int32(duration.Seconds())),
 	}
-	result, err := stsClient.AssumeRole(context.TODO(), input)
+	result, err := stsClient.AssumeRole(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
