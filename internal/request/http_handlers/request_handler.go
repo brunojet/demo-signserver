@@ -62,7 +62,7 @@ func (h *RequestHandler) RegisterRoutes(r *gin.Engine) {
 		requests.POST("", h.CreateRequest)
 		requests.GET(":id", h.GetSignerStatusByID)
 	}
-	requests = r.Group("/mamange_requests")
+	requests = r.Group("/manage_requests")
 	{
 		requests.GET(":id", h.GetRequestByID)
 	}
