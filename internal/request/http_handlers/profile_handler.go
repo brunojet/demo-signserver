@@ -1,6 +1,7 @@
 package http_handlers
 
 import (
+	"demo-signserver/internal/observability"
 	"demo-signserver/internal/request/dtos"
 	"demo-signserver/internal/request/services"
 	"fmt"
@@ -68,9 +69,15 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 func (h *ProfileHandler) RegisterRoutes(r *gin.Engine) {
 	profiles := r.Group("/profiles")
 	{
-		profiles.POST("", h.CreateProfile)
-		profiles.GET(":id", h.GetProfileByID)
-		profiles.PATCH(":id", h.UpdateProfile)
+		profiles.POST("", observability.ObservableMiddleware(func(c *gin.Context, obs *observability.Observability) {
+			h.CreateProfile(c)
+		}))
+		profiles.GET(":id", observability.ObservableMiddleware(func(c *gin.Context, obs *observability.Observability) {
+			h.GetProfileByID(c)
+		}))
+		profiles.PATCH(":id", observability.ObservableMiddleware(func(c *gin.Context, obs *observability.Observability) {
+			h.UpdateProfile(c)
+		}))
 	}
 }
 

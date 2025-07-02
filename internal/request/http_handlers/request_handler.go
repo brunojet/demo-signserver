@@ -1,6 +1,7 @@
 package http_handlers
 
 import (
+	"demo-signserver/internal/observability"
 	"demo-signserver/internal/request/dtos"
 	"demo-signserver/internal/request/services"
 	"net/http"
@@ -59,12 +60,18 @@ func (h *RequestHandler) GetSignerStatusByID(c *gin.Context) {
 func (h *RequestHandler) RegisterRoutes(r *gin.Engine) {
 	requests := r.Group("/requests")
 	{
-		requests.POST("", h.CreateRequest)
-		requests.GET(":id", h.GetSignerStatusByID)
+		requests.POST("", observability.ObservableMiddleware(func(c *gin.Context, obs *observability.Observability) {
+			h.CreateRequest(c)
+		}))
+		requests.GET(":id", observability.ObservableMiddleware(func(c *gin.Context, obs *observability.Observability) {
+			h.GetSignerStatusByID(c)
+		}))
 	}
 	requests = r.Group("/manage_requests")
 	{
-		requests.GET(":id", h.GetRequestByID)
+		requests.GET(":id", observability.ObservableMiddleware(func(c *gin.Context, obs *observability.Observability) {
+			h.GetRequestByID(c)
+		}))
 	}
 }
 

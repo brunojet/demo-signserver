@@ -45,12 +45,13 @@ func ObservableMiddleware(handler ObservableHandlerFunc) gin.HandlerFunc {
 			"path":      c.Request.URL.Path,
 		}
 		jsonLog, _ := json.Marshal(logEntry)
-		obs.Logger.Println(string(jsonLog))
+		// Logging assíncrono
+		go obs.Logger.Println(string(jsonLog))
 
-		// --- Métricas: incrementar contador ---
-		IncRequestCount(c.FullPath())
+		// Métricas assíncrono
+		go IncRequestCount(c.FullPath())
 
-		// --- Tracing: iniciar span ---
+		// Tracing: iniciar span (mantém síncrono para garantir defer)
 		span, _ := StartSpan(c.Request.Context(), "http_request", requestID)
 		defer span.End()
 
@@ -68,7 +69,7 @@ func ObservableMiddleware(handler ObservableHandlerFunc) gin.HandlerFunc {
 			"duration_ms": duration.Milliseconds(),
 		}
 		jsonLog, _ = json.Marshal(logEntry)
-		obs.Logger.Println(string(jsonLog))
+		go obs.Logger.Println(string(jsonLog))
 	}
 }
 
