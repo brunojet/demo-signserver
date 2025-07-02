@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -72,6 +73,9 @@ func TestObservableMiddleware_LogsAndMetrics(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
+
+	// Aguarda logs assíncronos
+	time.Sleep(10 * time.Millisecond)
 
 	// Verifica se logou entrada e saída
 	logs := buf.String()
