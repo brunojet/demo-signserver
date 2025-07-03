@@ -16,9 +16,14 @@ import (
 var testMetrics *observability.MetricsService
 
 func resetMetrics() {
-	testMetrics = observability.NewMetricsService(&observability.LogSink{})
+	testAccumulator := observability.NewAccumulatorSink()
+	testMetrics = observability.NewMetricsService(testAccumulator)
 	SetMetricsService(testMetrics)
+	// expõe o sink acumulador para uso nos testes
+	testAccumulatorSink = testAccumulator
 }
+
+var testAccumulatorSink *observability.AccumulatorSink
 
 func TestObservableMiddleware_RequestIDGeneration(t *testing.T) {
 	resetMetrics()
@@ -83,7 +88,7 @@ func TestObservableMiddleware_LogsAndMetrics(t *testing.T) {
 	assert.Contains(t, logs, "Request recebida")
 	assert.Contains(t, logs, "Request finalizada")
 	// Verifica se incrementou métrica
-	val := testMetrics.Get("http_request_count")
+	val := testAccumulatorSink.Get("http_request_count")
 	assert.True(t, val > 0)
 }
 

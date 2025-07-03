@@ -16,19 +16,14 @@ func (s *TestSink) Send(m Metric) {
 }
 
 func TestMetricsService_Basic(t *testing.T) {
-	sink := &TestSink{}
+	sink := NewAccumulatorSink()
 	ms := NewMetricsService(sink)
 
 	ms.Inc("foo_counter", map[string]string{"tag": "a"})
 	ms.Set("bar_gauge", 42, nil)
 
-	assert.Equal(t, 1.0, ms.Get("foo_counter"))
-	assert.Equal(t, 42.0, ms.Get("bar_gauge"))
-	assert.Len(t, sink.Received, 2)
-	assert.Equal(t, "foo_counter", sink.Received[0].Name)
-	assert.Equal(t, Counter, sink.Received[0].Type)
-	assert.Equal(t, "bar_gauge", sink.Received[1].Name)
-	assert.Equal(t, Gauge, sink.Received[1].Type)
+	assert.Equal(t, 1.0, sink.Get("foo_counter"))
+	assert.Equal(t, 42.0, sink.Get("bar_gauge"))
 }
 
 // --- Extra tests migrated from metrics_extra_test.go ---
@@ -39,15 +34,14 @@ func (d *DummySink) Send(m Metric) { d.called = true }
 
 func TestMetricsService_IncSetNoSink(t *testing.T) {
 	ms := NewMetricsService(nil)
+	// Não há acúmulo interno, só garante que não panica
 	ms.Inc("no_sink_counter", nil)
 	ms.Set("no_sink_gauge", 99, nil)
-	assert.Equal(t, 1.0, ms.Get("no_sink_counter"))
-	assert.Equal(t, 99.0, ms.Get("no_sink_gauge"))
 }
 
 func TestMetricsService_GetNotExists(t *testing.T) {
-	ms := NewMetricsService(nil)
-	assert.Equal(t, 0.0, ms.Get("not_exists"))
+	sink := NewAccumulatorSink()
+	assert.Equal(t, 0.0, sink.Get("not_exists"))
 }
 
 func TestLogSink_Send(t *testing.T) {
@@ -57,7 +51,7 @@ func TestLogSink_Send(t *testing.T) {
 }
 
 func TestMetricsService_Concurrent(t *testing.T) {
-	sink := &DummySink{}
+	sink := NewAccumulatorSink()
 	ms := NewMetricsService(sink)
 	wg := sync.WaitGroup{}
 	for i := 0; i < 100; i++ {
@@ -69,10 +63,9 @@ func TestMetricsService_Concurrent(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	val := ms.Get("conc_counter")
+	val := sink.Get("conc_counter")
 	assert.Equal(t, 100.0, val)
-	assert.Equal(t, 42.0, ms.Get("conc_gauge"))
-	assert.True(t, sink.called)
+	assert.Equal(t, 42.0, sink.Get("conc_gauge"))
 }
 
 // Sinks para testes extras
@@ -117,9 +110,10 @@ func TestMetricsService_TagsArePassedToSink(t *testing.T) {
 }
 
 func TestMetricsService_IncSetMix(t *testing.T) {
-	ms := NewMetricsService(nil)
+	sink := NewAccumulatorSink()
+	ms := NewMetricsService(sink)
 	ms.Inc("mix_counter", nil)
 	ms.Set("mix_counter", 10, nil)
 	ms.Inc("mix_counter", nil)
-	assert.Equal(t, 11.0, ms.Get("mix_counter"))
+	assert.Equal(t, 11.0, sink.Get("mix_counter"))
 }
