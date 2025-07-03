@@ -1,6 +1,7 @@
 package observability
 
 import (
+	"demo-signserver/pkg/observability"
 	"encoding/json"
 	"log"
 	"time"
@@ -21,6 +22,14 @@ type Observability struct {
 
 // Middleware que injeta observabilidade e executa o handler de negócio
 var defaultLogger = log.Default()
+
+// Adicione uma variável global para o serviço de métricas
+var metricsService *observability.MetricsService
+
+// Permite injetar o serviço de métricas (ex: no main)
+func SetMetricsService(svc *observability.MetricsService) {
+	metricsService = svc
+}
 
 func ObservableMiddleware(handler ObservableHandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -49,7 +58,9 @@ func ObservableMiddleware(handler ObservableHandlerFunc) gin.HandlerFunc {
 		go obs.Logger.Println(string(jsonLog))
 
 		// Métricas assíncrono
-		go IncRequestCount(c.FullPath())
+		if metricsService != nil {
+			go metricsService.Inc("http_request_count", map[string]string{"endpoint": c.FullPath()})
+		}
 
 		// Tracing: iniciar span (mantém síncrono para garantir defer)
 		span, _ := StartSpan(c.Request.Context(), "http_request", requestID)

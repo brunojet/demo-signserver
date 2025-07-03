@@ -2,6 +2,7 @@ package observability
 
 import (
 	"bytes"
+	"demo-signserver/pkg/observability"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,12 +13,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var testMetrics *observability.MetricsService
+
 func resetMetrics() {
-	metrics := GetMetricsSnapshot()
-	for k := range metrics {
-		requestCount[k] = 0
-	}
+	testAccumulator := observability.NewAccumulatorSink()
+	testMetrics = observability.NewMetricsService(testAccumulator)
+	SetMetricsService(testMetrics)
+	// expõe o sink acumulador para uso nos testes
+	testAccumulatorSink = testAccumulator
 }
+
+var testAccumulatorSink *observability.AccumulatorSink
 
 func TestObservableMiddleware_RequestIDGeneration(t *testing.T) {
 	resetMetrics()
@@ -82,8 +88,8 @@ func TestObservableMiddleware_LogsAndMetrics(t *testing.T) {
 	assert.Contains(t, logs, "Request recebida")
 	assert.Contains(t, logs, "Request finalizada")
 	// Verifica se incrementou métrica
-	metrics := GetMetricsSnapshot()
-	assert.True(t, metrics["/test"] > 0)
+	val := testAccumulatorSink.Get("http_request_count")
+	assert.True(t, val > 0)
 }
 
 func TestObservableMiddleware_HandlerIsCalled(t *testing.T) {
