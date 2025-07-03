@@ -95,6 +95,7 @@ func (s *RequestService) GetSignerStatusByID(id string) (*domain.SignGetResponse
 		ID:           record.ID,
 		SignerStatus: *record.SignerStatus,
 		SignerError:  record.GetLastError(),
+		Method:       "GET",
 		DownloadURL:  s.getPresignedUrl(record.SignedFile),
 	}
 	return response, err
@@ -104,7 +105,7 @@ func (s *RequestService) getPresignedUrl(bucketInfo *domain.BucketInfo) string {
 	if bucketInfo == nil || bucketInfo.BucketName == "" || bucketInfo.ObjectKey == "" {
 		return ""
 	}
-	url, err := s.s3Service.GeneratePresignedURL(bucketInfo.ObjectKey, 15*time.Minute)
+	url, err := s.s3Service.GeneratePresignedPutURL(bucketInfo.ObjectKey, 15*time.Minute)
 	if err != nil {
 		return ""
 	}
@@ -114,7 +115,7 @@ func (s *RequestService) getPresignedUrl(bucketInfo *domain.BucketInfo) string {
 // Gera um nome de arquivo único, gera URL pré-assinada e retorna (nome, url, erro)
 func (s *RequestService) GenerateUniquePresignedURL() (string, string, error) {
 	fileName := uuid.New().String()
-	url, err := s.s3Service.GeneratePresignedURL(fileName, 15*time.Minute)
+	url, err := s.s3Service.GeneratePresignedPutURL(fileName, 15*time.Minute)
 	if err != nil {
 		return "", "", err
 	}
