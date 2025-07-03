@@ -25,13 +25,13 @@ func (h *ProfileHandler) CreateProfile(c *gin.Context) {
 		return
 	}
 	profile := dto.GetDomainCreateSignerProfile()
-	ID, err := h.Service.CreateProfile(profile)
+	err := h.Service.CreateProfile(profile)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.Header("Location", "/profiles/"+ID)
-	c.JSON(http.StatusCreated, gin.H{"id": ID})
+	c.Header("Location", "/profiles/"+profile.ID)
+	c.JSON(http.StatusCreated, gin.H{"id": profile.ID})
 }
 
 func (h *ProfileHandler) GetProfileByID(c *gin.Context) {

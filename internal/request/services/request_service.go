@@ -3,16 +3,18 @@ package services
 import (
 	"demo-signserver/internal/repository/domain"
 	"demo-signserver/internal/repository/repositories"
-	"demo-signserver/internal/request/dtos"
 	storage_services "demo-signserver/pkg/storage/services"
 	"errors"
 	"os"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type RequestService struct {
 	service   *repositories.SignRequestService
 	s3Service *storage_services.S3Service
+	bucket    string
 }
 
 var request_service *repositories.SignRequestService = nil
@@ -33,9 +35,8 @@ func getRequestService() *repositories.SignRequestService {
 	return request_service
 }
 
-func getS3Service() *storage_services.S3Service {
+func getS3Service(bucket string) *storage_services.S3Service {
 	if s3_service == nil {
-		bucket := os.Getenv("SIGN_STORAGE_BUCKET")
 		realS3, err := storage_services.NewS3Service(bucket)
 		if err != nil {
 			panic("Erro ao criar S3Service real: " + err.Error())
@@ -46,38 +47,75 @@ func getS3Service() *storage_services.S3Service {
 }
 
 func NewRequestService() *RequestService {
-	return &RequestService{service: getRequestService(), s3Service: getS3Service()}
+	bucket := os.Getenv("SIGN_STORAGE_BUCKET")
+	return &RequestService{service: getRequestService(), s3Service: getS3Service(bucket), bucket: bucket}
 }
 
-func (s *RequestService) CreateRequest(request *domain.SignRequest) (string, error) {
+func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.SignRequestResponse, error) {
 	profileRepo := repositories.NewSignProfileService()
 	profile, err := profileRepo.GetProfileByID(*request.SignerProfileId)
 	if err != nil || profile == nil {
-		return "", errors.New("profile_id não encontrado")
+		return nil, errors.New("profile_id não encontrado")
 	}
-	return s.service.CreateRequest(request)
+
+	ID, url, err := s.GenerateUniquePresignedURL()
+
+	if err != nil || ID == "" {
+		return nil, errors.New("erro ao gerar URL pré-assinada")
+	}
+
+	request.SetUnsingedBucketInfo(s.bucket, ID)
+	err = s.service.CreateRequest(request)
+
+	if err != nil {
+		return nil, err
+	}
+
+	response := &domain.SignRequestResponse{
+		ID:           ID,
+		SignerStatus: *request.SignerStatus,
+		SignerError:  request.GetLastError(),
+		UploadURL:    url,
+	}
+
+	return response, err
 }
 
 func (s *RequestService) GetRequestByID(id string) (*domain.SignRequest, error) {
 	return s.service.GetRequestByID(id)
 }
 
-func (s *RequestService) GetSignerStatusByID(id string) (*dtos.GetResponseDTO, error) {
+func (s *RequestService) GetSignerStatusByID(id string) (*domain.SignGetResponse, error) {
 	record, err := s.service.GetRequestByID(id)
 	if (err != nil) || (record == nil) {
 		return nil, err
 	}
-	response := dtos.NewGetResponseDTOFromDomain(record, getPresignedUrlFromDomain(record.SignedFile))
+	response := &domain.SignGetResponse{
+		ID:           record.ID,
+		SignerStatus: *record.SignerStatus,
+		SignerError:  record.GetLastError(),
+		DownloadURL:  s.getPresignedUrl(record.SignedFile),
+	}
 	return response, err
 }
 
-func getPresignedUrlFromDomain(bucketInfo *domain.BucketInfo) *string {
+func (s *RequestService) getPresignedUrl(bucketInfo *domain.BucketInfo) string {
 	if bucketInfo == nil || bucketInfo.BucketName == "" || bucketInfo.ObjectKey == "" {
-		return nil
+		return ""
 	}
-	url, err := getS3Service().GeneratePresignedURL(bucketInfo.ObjectKey, 15*time.Minute)
+	url, err := s.s3Service.GeneratePresignedURL(bucketInfo.ObjectKey, 15*time.Minute)
 	if err != nil {
-		return nil
+		return ""
 	}
-	return &url
+	return url
+}
+
+// Gera um nome de arquivo único, gera URL pré-assinada e retorna (nome, url, erro)
+func (s *RequestService) GenerateUniquePresignedURL() (string, string, error) {
+	fileName := uuid.New().String()
+	url, err := s.s3Service.GeneratePresignedURL(fileName, 15*time.Minute)
+	if err != nil {
+		return "", "", err
+	}
+	return fileName, url, nil
 }

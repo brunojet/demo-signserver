@@ -1,6 +1,7 @@
 package db_services
 
 import (
+	"demo-signserver/pkg/repository/domain"
 	"fmt"
 	"strings"
 
@@ -38,27 +39,39 @@ func GetStringAttrValue(attr types.AttributeValue) string {
 }
 
 // AddPKSKToItem adiciona PK e SK ao item conforme as regras de negócio.
-func AddPKSKToItem(item map[string]types.AttributeValue, pkKey, skKey string) {
-	pkVal, pkOk := item[pkKey]
-
-	if pkKey == "" || !pkOk {
-		item[PARTITION_KEY] = &types.AttributeValueMemberS{Value: uuid.NewString()}
+func AddPKSKToItem(obj domain.BaseDomainInterface, item map[string]types.AttributeValue, pkKey, skKey string) {
+	if pkKey == ID_KEY {
+		item[PARTITION_KEY] = &types.AttributeValueMemberS{Value: obj.GetID()}
 	} else {
-		item[PARTITION_KEY] = &types.AttributeValueMemberS{Value: GetStringAttrValue(pkVal)}
-	}
+		pkVal, pkOk := item[pkKey]
 
-	if skKey != "" {
-		skVal := item[skKey]
-		item[SORT_KEY] = &types.AttributeValueMemberS{Value: GetStringAttrValue(skVal)}
+		if pkKey == "" || !pkOk {
+			item[PARTITION_KEY] = &types.AttributeValueMemberS{Value: uuid.NewString()}
+		} else {
+			item[PARTITION_KEY] = &types.AttributeValueMemberS{Value: GetStringAttrValue(pkVal)}
+		}
+
+		if skKey != "" {
+			skVal := item[skKey]
+			item[SORT_KEY] = &types.AttributeValueMemberS{Value: GetStringAttrValue(skVal)}
+		}
 	}
 }
 
 // AddIDToItem preenche o campo ID no item a partir de PK e SK
-func AddIDToItem(item map[string]types.AttributeValue, skKey string) {
-	pkStr := GetStringAttrValue(item[PARTITION_KEY])
+func AddIDToItem(obj domain.BaseDomainInterface, item map[string]types.AttributeValue, pkKey, skKey string) {
+	pkStr := ""
+
+	if pkKey == ID_KEY {
+		pkStr = obj.GetID()
+	} else {
+		pkStr = GetStringAttrValue(item[PARTITION_KEY])
+	}
+
 	if pkStr == "" {
 		return
 	}
+
 	id := pkStr
 
 	if skKey != "" {

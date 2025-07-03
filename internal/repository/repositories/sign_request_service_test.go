@@ -35,13 +35,13 @@ func setupSignRequestServiceTest() *SignRequestService {
 func TestSignRequestService_CreateRequest_And_GetRequestByID(t *testing.T) {
 	svc := setupSignRequestServiceTest()
 	request := &domain.SignRequest{}
-	ID, err := svc.CreateRequest(request)
+	err := svc.CreateRequest(request)
 	assert.NoError(t, err)
 
-	result, err := svc.GetRequestByID(ID)
+	result, err := svc.GetRequestByID(request.ID)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Equal(t, ID, result.ID)
+	assert.Equal(t, request.ID, result.ID)
 }
 
 func TestSignRequestService_GetRequestByID_NotFound(t *testing.T) {
@@ -54,15 +54,15 @@ func TestSignRequestService_GetRequestByID_NotFound(t *testing.T) {
 func TestSignRequestService_UpdateRequest(t *testing.T) {
 	svc := setupSignRequestServiceTest()
 	request := &domain.SignRequest{}
-	ID, err := svc.CreateRequest(request)
+	err := svc.CreateRequest(request)
 	assert.NoError(t, err)
 
 	requestUpdated := &domain.SignRequest{}
-	err = svc.UpdateRequest(ID, requestUpdated)
+	err = svc.UpdateRequest(request.ID, requestUpdated)
 	assert.NoError(t, err)
 
-	result, err := svc.GetRequestByID(ID)
+	result, err := svc.GetRequestByID(request.ID)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Equal(t, ID, result.ID)
+	assert.Equal(t, request.ID, result.ID)
 }

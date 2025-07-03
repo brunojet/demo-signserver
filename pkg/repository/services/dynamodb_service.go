@@ -35,7 +35,6 @@ func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBServ
 
 // PutItem insere um item na tabela DynamoDB.
 func (s *DynamoDBService) putItemInternal(ctx context.Context, item map[string]types.AttributeValue) error {
-	AddPKSKToItem(item, s.PKKey, s.SKKey)
 	condExpr, exprAttrNames := BuildNoOverwriteCondition(s.PKKey, s.SKKey)
 
 	_, err := s.Client.PutItem(ctx, &dynamodb.PutItemInput{
@@ -47,7 +46,6 @@ func (s *DynamoDBService) putItemInternal(ctx context.Context, item map[string]t
 	if err != nil {
 		fmt.Printf("[DynamoDBService] Erro ao inserir item na tabela %s: %v\n", s.Table, err)
 	}
-	AddIDToItem(item, s.SKKey)
 	return err
 }
 
@@ -103,22 +101,24 @@ func (s *DynamoDBService) GetItem(ctx context.Context, ID string, out domain.Bas
 }
 
 // CreateItem insere um item, sempre evitando sobrescrita (ConditionExpression).
-func (s *DynamoDBService) CreateItem(ctx context.Context, obj domain.BaseDomainInterface) (string, error) {
+func (s *DynamoDBService) CreateItem(ctx context.Context, obj domain.BaseDomainInterface) error {
 	obj.SetCreateTs()
 	item, err := MarshalItem(obj)
 	if err != nil {
-		return "", err
+		return err
 	}
 
+	AddPKSKToItem(obj, item, s.PKKey, s.SKKey)
 	err = s.putItemInternal(ctx, item)
+	AddIDToItem(obj, item, s.PKKey, s.SKKey)
 
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	ID := GetStringAttrValue(item[ID_KEY])
+	obj.SetID(GetStringAttrValue(item[ID_KEY]))
 
-	return ID, err
+	return err
 }
 
 // UpdateItem atualiza apenas os campos não-chave do objeto informado (update parcial).

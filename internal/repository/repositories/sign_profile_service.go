@@ -30,7 +30,7 @@ func NewSignProfileService() *SignProfileService {
 	return &SignProfileService{Dynamo: dynamo}
 }
 
-func (s *SignProfileService) CreateProfile(profile *domain.SignerProfile) (string, error) {
+func (s *SignProfileService) CreateProfile(profile *domain.SignerProfile) error {
 	return s.Dynamo.CreateItem(context.Background(), profile)
 }
 

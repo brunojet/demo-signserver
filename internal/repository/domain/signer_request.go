@@ -54,6 +54,29 @@ type SignRequest struct {
 	History         *[]RequestHistoryEntry `json:"history,omitempty" dynamodbav:"history,omitempty"`
 }
 
+type SignRequestResponse struct {
+	ID           string       `json:"id" binding:"required"`
+	SignerStatus SignerStep   `json:"signer_status,omitempty" binding:"required"`
+	SignerError  *SignerError `json:"signer_error,omitempty"`
+	UploadURL    string       `json:"pre_signed_url" binding:"required,url"`
+}
+
+type SignGetResponse struct {
+	ID           string       `json:"id" binding:"required"`
+	SignerStatus SignerStep   `json:"signer_status,omitempty" binding:"required"`
+	SignerError  *SignerError `json:"signer_error,omitempty"`
+	DownloadURL  string       `json:"pre_signed_url" binding:"required,url"`
+}
+
+func (s *SignRequest) SetUnsingedBucketInfo(bucketName, objectKey string) {
+	s.UnsignedFile = &BucketInfo{
+		BucketName: bucketName,
+		ObjectKey:  objectKey,
+		Size:       0,
+		SHA256:     "",
+	}
+}
+
 func (s *SignRequest) SetSignerStatus(step SignerStep, err *SignerError) {
 	if s.SignerStatus == nil {
 		s.SignerStatus = &step

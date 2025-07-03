@@ -6,6 +6,7 @@ import (
 
 type BaseDomainInterface interface {
 	SetID(string)
+	GetID() string
 	SetCreateTs()
 	SetUpdateTs()
 }
@@ -14,6 +15,10 @@ type BaseDomain struct {
 	ID        string `json:"id" dynamodbav:"-"`
 	CreatedAt string `json:"created_at" dynamodbav:"created_at"`
 	UpdatedAt string `json:"updated_at" dynamodbav:"updated_at"`
+}
+
+func (b *BaseDomain) GetID() string {
+	return b.ID
 }
 
 func (b *BaseDomain) SetID(id string) {
