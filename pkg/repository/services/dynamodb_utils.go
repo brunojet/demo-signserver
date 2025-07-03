@@ -161,7 +161,7 @@ func BuildUpdateExpressionFromAVMap(b map[string]types.AttributeValue) (string, 
 // BuildNoOverwriteCondition monta a ConditionExpression e ExpressionAttributeNames para evitar sobrescrita de item no DynamoDB.
 func BuildNoOverwriteCondition(pkKey, skKey string) (condExpr string, exprAttrNames map[string]string) {
 	pkName := pkKey
-	if pkName == "" {
+	if pkName == ID_KEY {
 		pkName = PARTITION_KEY
 	}
 	cond := "attribute_not_exists(#pk)"
@@ -176,7 +176,7 @@ func BuildNoOverwriteCondition(pkKey, skKey string) (condExpr string, exprAttrNa
 
 // BuildUpdateCondition retorna uma ConditionExpression para garantir que o item existe antes do update.
 func BuildUpdateCondition(pkKey, skKey string) string {
-	if pkKey == "" {
+	if pkKey == ID_KEY {
 		pkKey = PARTITION_KEY
 	}
 

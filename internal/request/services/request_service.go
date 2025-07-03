@@ -65,6 +65,7 @@ func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.Sig
 	}
 
 	request.SetUnsingedBucketInfo(s.bucket, ID)
+	request.SetID(ID)
 	err = s.service.CreateRequest(request)
 
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"demo-signserver/internal/repository/domain"
 	db_services "demo-signserver/pkg/repository/services"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,6 +36,7 @@ func setupSignRequestServiceTest() *SignRequestService {
 func TestSignRequestService_CreateRequest_And_GetRequestByID(t *testing.T) {
 	svc := setupSignRequestServiceTest()
 	request := &domain.SignRequest{}
+	request.SetID(uuid.New().String())
 	err := svc.CreateRequest(request)
 	assert.NoError(t, err)
 
@@ -54,6 +56,7 @@ func TestSignRequestService_GetRequestByID_NotFound(t *testing.T) {
 func TestSignRequestService_UpdateRequest(t *testing.T) {
 	svc := setupSignRequestServiceTest()
 	request := &domain.SignRequest{}
+	request.SetID(uuid.New().String())
 	err := svc.CreateRequest(request)
 	assert.NoError(t, err)
 
