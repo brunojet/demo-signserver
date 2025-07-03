@@ -2,8 +2,12 @@ package workerpool
 
 import (
 	"context"
+	"demo-signserver/pkg/observability"
+	"encoding/json"
+	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Task func(ctx context.Context)
@@ -17,6 +21,22 @@ type WorkerPool struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	OnPanic func(interface{}) // callback opcional para panics em tasks
+
+	// Métricas
+	TasksProcessed  uint64 // total de tasks executadas
+	TasksRejected   uint64 // total de tasks rejeitadas
+	TasksEnqueued   uint64 // total de tasks aceitas
+	CurrentInFlight int64  // tasks em andamento
+
+	// Adicione um campo para o serviço de métricas
+	Metrics *observability.MetricsService
+}
+
+type WorkerPoolMetrics struct {
+	TasksProcessed  uint64 `json:"tasks_processed"`
+	TasksRejected   uint64 `json:"tasks_rejected"`
+	TasksEnqueued   uint64 `json:"tasks_enqueued"`
+	CurrentInFlight int64  `json:"current_in_flight"`
 }
 
 // New cria um novo WorkerPool com N workers e buffer de tarefas
@@ -47,7 +67,14 @@ func (wp *WorkerPool) Start() {
 				}
 			}()
 			for task := range wp.tasks {
-				task(wp.ctx)
+				atomic.AddInt64(&wp.CurrentInFlight, 1)
+				func() {
+					defer func() {
+						atomic.AddInt64(&wp.CurrentInFlight, -1)
+						atomic.AddUint64(&wp.TasksProcessed, 1)
+					}()
+					task(wp.ctx)
+				}()
 			}
 		}()
 	}
@@ -59,17 +86,17 @@ func (wp *WorkerPool) Enqueue(task Task) bool {
 	stopped := atomic.LoadInt32(&wp.stopped) == 1
 	wp.mu.Unlock()
 	if stopped {
+		atomic.AddUint64(&wp.TasksRejected, 1)
 		return false
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			// Propaga panic inesperado (pool ativo), suprime apenas se pool já foi parado
 			if atomic.LoadInt32(&wp.stopped) != 1 {
 				panic(r)
 			}
-			// else: suprime panic esperado ao tentar enviar em canal fechado
 		}
 	}()
+	atomic.AddUint64(&wp.TasksEnqueued, 1)
 	wp.tasks <- task
 	return true
 }
@@ -83,4 +110,34 @@ func (wp *WorkerPool) Stop() {
 	}
 	wp.mu.Unlock()
 	wp.wg.Wait()
+}
+
+// Exporta um snapshot das métricas atuais do pool
+func (wp *WorkerPool) ExportMetrics() WorkerPoolMetrics {
+	return WorkerPoolMetrics{
+		TasksProcessed:  atomic.LoadUint64(&wp.TasksProcessed),
+		TasksRejected:   atomic.LoadUint64(&wp.TasksRejected),
+		TasksEnqueued:   atomic.LoadUint64(&wp.TasksEnqueued),
+		CurrentInFlight: atomic.LoadInt64(&wp.CurrentInFlight),
+	}
+}
+
+// Exemplo de exportação periódica para log estruturado
+func (wp *WorkerPool) StartMetricsExporter(intervalSec int) chan struct{} {
+	stop := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(time.Duration(intervalSec) * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				metrics := wp.ExportMetrics()
+				jsonData, _ := json.Marshal(metrics)
+				log.Printf("WORKERPOOL_METRICS %s", string(jsonData))
+			case <-stop:
+				return
+			}
+		}
+	}()
+	return stop
 }

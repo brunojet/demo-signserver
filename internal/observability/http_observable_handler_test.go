@@ -2,6 +2,7 @@ package observability
 
 import (
 	"bytes"
+	"demo-signserver/pkg/observability"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,11 +13,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var testMetrics *observability.MetricsService
+
 func resetMetrics() {
-	metrics := GetMetricsSnapshot()
-	for k := range metrics {
-		requestCount[k] = 0
-	}
+	testMetrics = observability.NewMetricsService(&observability.LogSink{})
+	SetMetricsService(testMetrics)
 }
 
 func TestObservableMiddleware_RequestIDGeneration(t *testing.T) {
@@ -82,8 +83,8 @@ func TestObservableMiddleware_LogsAndMetrics(t *testing.T) {
 	assert.Contains(t, logs, "Request recebida")
 	assert.Contains(t, logs, "Request finalizada")
 	// Verifica se incrementou métrica
-	metrics := GetMetricsSnapshot()
-	assert.True(t, metrics["/test"] > 0)
+	val := testMetrics.Get("http_request_count")
+	assert.True(t, val > 0)
 }
 
 func TestObservableMiddleware_HandlerIsCalled(t *testing.T) {

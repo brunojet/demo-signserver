@@ -24,6 +24,11 @@ func TestWorkerPool_Basic(t *testing.T) {
 
 	pool.Stop()
 	assert.Equal(t, int32(tasks), atomic.LoadInt32(&count))
+	metrics := pool.ExportMetrics()
+	assert.Equal(t, uint64(tasks), metrics.TasksProcessed)
+	assert.Equal(t, uint64(tasks), metrics.TasksEnqueued)
+	assert.Equal(t, uint64(0), metrics.TasksRejected)
+	assert.Equal(t, int64(0), metrics.CurrentInFlight)
 }
 
 func TestWorkerPool_StopEarly(t *testing.T) {
@@ -40,6 +45,11 @@ func TestWorkerPool_StopEarly(t *testing.T) {
 	// Após Stop, Enqueue deve falhar
 	ok = pool.Enqueue(func(ctx context.Context) {})
 	assert.False(t, ok)
+	metrics := pool.ExportMetrics()
+	assert.Equal(t, uint64(1), metrics.TasksProcessed)
+	assert.Equal(t, uint64(1), metrics.TasksEnqueued)
+	assert.Equal(t, uint64(1), metrics.TasksRejected)
+	assert.Equal(t, int64(0), metrics.CurrentInFlight)
 }
 
 func TestWorkerPool_Parallelism(t *testing.T) {
@@ -59,6 +69,11 @@ func TestWorkerPool_Parallelism(t *testing.T) {
 	dur := time.Since(start)
 	assert.Less(t, int(dur.Milliseconds()), 200) // Deve rodar em paralelo
 	assert.Equal(t, int32(tasks), atomic.LoadInt32(&count))
+	metrics := pool.ExportMetrics()
+	assert.Equal(t, uint64(tasks), metrics.TasksProcessed)
+	assert.Equal(t, uint64(tasks), metrics.TasksEnqueued)
+	assert.Equal(t, uint64(0), metrics.TasksRejected)
+	assert.Equal(t, int64(0), metrics.CurrentInFlight)
 }
 
 func TestWorkerPool_CooperativeCancel(t *testing.T) {
@@ -78,6 +93,11 @@ func TestWorkerPool_CooperativeCancel(t *testing.T) {
 	pool.Stop()
 	<-done
 	assert.Equal(t, int32(1), atomic.LoadInt32(&cancelled))
+	metrics := pool.ExportMetrics()
+	assert.Equal(t, uint64(1), metrics.TasksProcessed)
+	assert.Equal(t, uint64(1), metrics.TasksEnqueued)
+	assert.Equal(t, uint64(0), metrics.TasksRejected)
+	assert.Equal(t, int64(0), metrics.CurrentInFlight)
 }
 
 func TestWorkerPool_Enqueue_ChannelClosedSuppressPanic(t *testing.T) {
@@ -87,6 +107,11 @@ func TestWorkerPool_Enqueue_ChannelClosedSuppressPanic(t *testing.T) {
 	// Deve suprimir o panic pois o pool está parado
 	ok := pool.Enqueue(func(ctx context.Context) {})
 	assert.False(t, ok)
+	metrics := pool.ExportMetrics()
+	assert.Equal(t, uint64(0), metrics.TasksProcessed)
+	assert.Equal(t, uint64(0), metrics.TasksEnqueued)
+	assert.Equal(t, uint64(1), metrics.TasksRejected)
+	assert.Equal(t, int64(0), metrics.CurrentInFlight)
 }
 
 func TestWorkerPool_Enqueue_PanicPropagates(t *testing.T) {
@@ -107,4 +132,9 @@ func TestWorkerPool_Enqueue_PanicPropagates(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Errorf("panic esperado não foi capturado")
 	}
+	metrics := pool.ExportMetrics()
+	assert.Equal(t, uint64(1), metrics.TasksProcessed)
+	assert.Equal(t, uint64(1), metrics.TasksEnqueued)
+	assert.Equal(t, uint64(0), metrics.TasksRejected)
+	assert.Equal(t, int64(0), metrics.CurrentInFlight)
 }
