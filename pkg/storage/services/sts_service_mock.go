@@ -7,7 +7,7 @@
 //	    // comportamento customizado
 //	  },
 //	}
-package storage_mock
+package storage_services
 
 import (
 	"context"

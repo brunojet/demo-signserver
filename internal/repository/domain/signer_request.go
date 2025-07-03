@@ -25,6 +25,13 @@ const (
 	SignerStepSigningFailed     SignerStep = "signing_failed"
 )
 
+type HttpMethod string
+
+const (
+	HttpMethodPut HttpMethod = "PUT"
+	HttpMethodGet HttpMethod = "GET"
+)
+
 // SignerError representa um erro ocorrido em um passo do fluxo.
 type SignerError struct {
 	Code    string `json:"code" dynamodbav:"code"`
@@ -58,7 +65,7 @@ type SignRequestResponse struct {
 	ID           string       `json:"id" binding:"required"`
 	SignerStatus SignerStep   `json:"signer_status,omitempty" binding:"required"`
 	SignerError  *SignerError `json:"signer_error,omitempty"`
-	Method       string       `json:"method" binding:"required,oneof=PUT"`
+	HttpMethod   HttpMethod   `json:"method" binding:"required,oneof=PUT"`
 	UploadURL    string       `json:"upload_url" binding:"required,url"`
 }
 
@@ -66,7 +73,7 @@ type SignGetResponse struct {
 	ID           string       `json:"id" binding:"required"`
 	SignerStatus SignerStep   `json:"signer_status,omitempty" binding:"required"`
 	SignerError  *SignerError `json:"signer_error,omitempty"`
-	Method       string       `json:"method" binding:"required,oneof=GET"`
+	HttpMethod   HttpMethod   `json:"method" binding:"required,oneof=GET"`
 	DownloadURL  string       `json:"download_url" binding:"required,url"`
 }
 

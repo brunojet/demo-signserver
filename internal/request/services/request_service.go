@@ -76,6 +76,7 @@ func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.Sig
 		ID:           ID,
 		SignerStatus: *request.SignerStatus,
 		SignerError:  request.GetLastError(),
+		HttpMethod:   domain.HttpMethodPut,
 		UploadURL:    url,
 	}
 
@@ -95,7 +96,7 @@ func (s *RequestService) GetSignerStatusByID(id string) (*domain.SignGetResponse
 		ID:           record.ID,
 		SignerStatus: *record.SignerStatus,
 		SignerError:  record.GetLastError(),
-		Method:       "GET",
+		HttpMethod:   domain.HttpMethodGet,
 		DownloadURL:  s.getPresignedUrl(record.SignedFile),
 	}
 	return response, err

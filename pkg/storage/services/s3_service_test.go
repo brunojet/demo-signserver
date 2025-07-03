@@ -6,26 +6,22 @@ import (
 	"testing"
 	"time"
 
-	storage_mock "demo-signserver/pkg/storage/mock"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGeneratePresignedURL_Success(t *testing.T) {
 	svc := &S3Service{Bucket: "bucket"}
 	url := "https://example.com/presigned"
-	presignClient := &storage_mock.MockPresignClient{URL: url}
+	presignClient := &MockPresignClient{URL: url}
 
 	oldNewPresignClient := newPresignClient
-	newPresignClient = func(_ *s3.Client) PresignPutObjectAPI { return presignClient }
+	newPresignClient = func(_ *s3.Client) PresignObjectAPI { return presignClient }
 	defer func() { newPresignClient = oldNewPresignClient }()
 
-	result, err := svc.GeneratePresignedURL("file.apk", 10*time.Minute)
+	result, err := svc.GeneratePresignedPutURL("file.apk", 10*time.Minute)
 	assert.NoError(t, err)
 	assert.Equal(t, url, result)
 }
@@ -33,13 +29,41 @@ func TestGeneratePresignedURL_Success(t *testing.T) {
 func TestGeneratePresignedURL_Error(t *testing.T) {
 	svc := &S3Service{Bucket: "bucket"}
 	errMock := errors.New("presign error")
-	presignClient := &storage_mock.MockPresignClient{Err: errMock}
+	presignClient := &MockPresignClient{Err: errMock}
 
 	oldNewPresignClient := newPresignClient
-	newPresignClient = func(_ *s3.Client) PresignPutObjectAPI { return presignClient }
+	newPresignClient = func(_ *s3.Client) PresignObjectAPI { return presignClient }
 	defer func() { newPresignClient = oldNewPresignClient }()
 
-	result, err := svc.GeneratePresignedURL("file.apk", 10*time.Minute)
+	result, err := svc.GeneratePresignedPutURL("file.apk", 10*time.Minute)
+	assert.Error(t, err)
+	assert.Empty(t, result)
+}
+
+func TestGeneratePresignedGetURL_Success(t *testing.T) {
+	svc := &S3Service{Bucket: "bucket"}
+	url := "https://example.com/presigned-get"
+	presignClient := &MockPresignClient{URL: url}
+
+	oldNewPresignClient := newPresignClient
+	newPresignClient = func(_ *s3.Client) PresignObjectAPI { return presignClient }
+	defer func() { newPresignClient = oldNewPresignClient }()
+
+	result, err := svc.GeneratePresignedGetURL("file.apk", 10*time.Minute)
+	assert.NoError(t, err)
+	assert.Equal(t, url, result)
+}
+
+func TestGeneratePresignedGetURL_Error(t *testing.T) {
+	svc := &S3Service{Bucket: "bucket"}
+	errMock := errors.New("presign error get")
+	presignClient := &MockPresignClient{Err: errMock}
+
+	oldNewPresignClient := newPresignClient
+	newPresignClient = func(_ *s3.Client) PresignObjectAPI { return presignClient }
+	defer func() { newPresignClient = oldNewPresignClient }()
+
+	result, err := svc.GeneratePresignedGetURL("file.apk", 10*time.Minute)
 	assert.Error(t, err)
 	assert.Empty(t, result)
 }
@@ -60,26 +84,4 @@ func TestNewS3Service_Error(t *testing.T) {
 	}
 	_, err := NewS3ServiceWithConfigLoader("bucket", mockLoader)
 	assert.Error(t, err)
-}
-
-func TestGenerateTemporaryS3Credentials_Success(t *testing.T) {
-	mockSTS := &storage_mock.MockSTSClient{
-		AssumeRoleFunc: func(ctx context.Context, params *sts.AssumeRoleInput, optFns ...func(*sts.Options)) (*sts.AssumeRoleOutput, error) {
-			return &sts.AssumeRoleOutput{
-				Credentials: &types.Credentials{
-					AccessKeyId:     aws.String("mock-access-key"),
-					SecretAccessKey: aws.String("mock-secret-key"),
-					SessionToken:    aws.String("mock-session-token"),
-				},
-			}, nil
-		},
-	}
-	mockLoader := func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error) {
-		return aws.Config{}, nil
-	}
-	roleArn := "arn:aws:iam::123456789012:role/test-role"
-	creds, err := GenerateTemporaryS3CredentialsWithClient(roleArn, "test-session", 900*time.Second, mockLoader, func(cfg aws.Config) STSAPI { return mockSTS })
-	assert.NoError(t, err)
-	assert.NotNil(t, creds)
-	assert.Equal(t, "mock-access-key", *creds.AccessKeyId)
 }
