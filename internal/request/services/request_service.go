@@ -4,32 +4,25 @@ import (
 	"demo-signserver/internal/repository/domain"
 	"demo-signserver/internal/repository/repositories"
 	"demo-signserver/internal/request/dtos"
+	storage_services "demo-signserver/pkg/storage/services"
 	"errors"
+	"os"
+	"time"
 )
-
-type S3Service interface {
-	GeneratePresignedURL(bucket, key string) (string, error)
-}
-
-type mockS3Service struct{}
-
-func (m *mockS3Service) GeneratePresignedURL(bucket, key string) (string, error) {
-	return "https://mock-s3-url/" + bucket + "/" + key, nil
-}
 
 type RequestService struct {
 	service   *repositories.SignRequestService
-	s3Service S3Service
+	s3Service *storage_services.S3Service
 }
 
 var request_service *repositories.SignRequestService = nil
-var s3_service S3Service = &mockS3Service{}
+var s3_service *storage_services.S3Service = nil
 
 func SetRequestServiceMock(mock *repositories.SignRequestService) {
 	request_service = mock
 }
 
-func SetS3ServiceMock(mock S3Service) {
+func SetS3ServiceMock(mock *storage_services.S3Service) {
 	s3_service = mock
 }
 
@@ -40,7 +33,15 @@ func getRequestService() *repositories.SignRequestService {
 	return request_service
 }
 
-func getS3Service() S3Service {
+func getS3Service() *storage_services.S3Service {
+	if s3_service == nil {
+		bucket := os.Getenv("SIGN_STORAGE_BUCKET")
+		realS3, err := storage_services.NewS3Service(bucket)
+		if err != nil {
+			panic("Erro ao criar S3Service real: " + err.Error())
+		}
+		s3_service = realS3
+	}
 	return s3_service
 }
 
@@ -74,7 +75,7 @@ func getPresignedUrlFromDomain(bucketInfo *domain.BucketInfo) *string {
 	if bucketInfo == nil || bucketInfo.BucketName == "" || bucketInfo.ObjectKey == "" {
 		return nil
 	}
-	url, err := getS3Service().GeneratePresignedURL(bucketInfo.BucketName, bucketInfo.ObjectKey)
+	url, err := getS3Service().GeneratePresignedURL(bucketInfo.ObjectKey, 15*time.Minute)
 	if err != nil {
 		return nil
 	}

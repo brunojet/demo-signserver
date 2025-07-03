@@ -91,3 +91,12 @@ func GenerateTemporaryS3CredentialsWithClient(roleArn, sessionName string, durat
 func GenerateTemporaryS3Credentials(roleArn, sessionName string, duration time.Duration) (*types.Credentials, error) {
 	return GenerateTemporaryS3CredentialsWithClient(roleArn, sessionName, duration, config.LoadDefaultConfig, newSTSClient)
 }
+
+// S3ServiceInterface define as operações expostas para uso/mocks
+// e abstrai detalhes de implementação do S3 real.
+type S3ServiceInterface interface {
+	GeneratePresignedURL(key string) (string, error)
+	GeneratePresignedURLWithExpiry(key string, expires time.Duration) (string, error)
+	GenerateTemporaryS3CredentialsWithClient(roleArn, sessionName string, duration time.Duration, loadConfig func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error), stsClientFactory func(cfg aws.Config) STSAPI) (*types.Credentials, error)
+	GenerateTemporaryS3Credentials(roleArn, sessionName string, duration time.Duration) (*types.Credentials, error)
+}
