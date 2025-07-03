@@ -27,6 +27,7 @@
         "ENVIRONMENT": "dev",
         "SIGN_PROFILE_TABLE": "profile",
         "SIGN_REQUEST_TABLE": "request",
+        "SIGN_STORAGE_BUCKET": "storage",
         "AWS_ACCESS_KEY_ID": "fake",
         "AWS_SECRET_ACCESS_KEY": "fake",
         "DYNAMODB_ENDPOINT": "http://localhost:8001"

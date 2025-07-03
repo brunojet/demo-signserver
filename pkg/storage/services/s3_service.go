@@ -2,6 +2,8 @@ package storage_services
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -28,7 +30,10 @@ func NewS3ServiceWithConfigLoader(bucket string, loadConfig func(ctx context.Con
 
 // NewS3Service padrão, usa config.LoadDefaultConfig
 func NewS3Service(bucket string) (*S3Service, error) {
-	return NewS3ServiceWithConfigLoader(bucket, config.LoadDefaultConfig)
+	project := os.Getenv("PROJECT_NAME")
+	env := os.Getenv("ENVIRONMENT")
+	bucket_name := fmt.Sprintf("%s-%s-%s", project, env, bucket)
+	return NewS3ServiceWithConfigLoader(bucket_name, config.LoadDefaultConfig)
 }
 
 var newPresignClient = func(client *s3.Client) PresignObjectAPI {
