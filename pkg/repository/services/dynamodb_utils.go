@@ -77,7 +77,7 @@ func AddIDToItem(obj domain.BaseDomainInterface, item map[string]types.Attribute
 	if skKey != "" {
 		skStr := GetStringAttrValue(item[SORT_KEY])
 		if skStr != "" {
-			id += "#" + skStr
+			id += "-" + skStr
 		}
 	}
 
@@ -88,7 +88,7 @@ func AddIDToItem(obj domain.BaseDomainInterface, item map[string]types.Attribute
 func MakeKeyByID(ID, pkKey, skKey string) map[string]types.AttributeValue {
 	result := make(map[string]types.AttributeValue)
 	if skKey != "" {
-		parts := strings.SplitN(ID, "#", 2)
+		parts := strings.SplitN(ID, "-", 2)
 		result[PARTITION_KEY] = &types.AttributeValueMemberS{Value: parts[0]}
 		if len(parts) > 1 {
 			result[SORT_KEY] = &types.AttributeValueMemberS{Value: parts[1]}

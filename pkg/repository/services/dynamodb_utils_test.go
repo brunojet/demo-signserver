@@ -73,7 +73,7 @@ func TestAddIDToItem_PKSK(t *testing.T) {
 	}
 	obj := &mockBaseDomain{id: "user1"}
 	AddIDToItem(obj, item, PARTITION_KEY, SORT_KEY)
-	if v, ok := item[ID_KEY].(*types.AttributeValueMemberS); !ok || v.Value != "user1#admin" {
+	if v, ok := item[ID_KEY].(*types.AttributeValueMemberS); !ok || v.Value != "user1-admin" {
 		t.Errorf("ID not set correctly, got %v", item[ID_KEY])
 	}
 }
@@ -101,7 +101,7 @@ func TestMakeKeyByID_OnlyPK(t *testing.T) {
 }
 
 func TestMakeKeyByID_PKSK(t *testing.T) {
-	key := "pkval#skval"
+	key := "pkval-skval"
 	result := MakeKeyByID(key, PARTITION_KEY, SORT_KEY)
 	if v, ok := result[PARTITION_KEY].(*types.AttributeValueMemberS); !ok || v.Value != "pkval" {
 		t.Errorf("Expected PK=pkval, got %v", result[PARTITION_KEY])
