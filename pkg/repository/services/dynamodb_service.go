@@ -4,7 +4,6 @@ import (
 	"context"
 	"demo-signserver/pkg/repository/domain"
 	"fmt"
-	"os"
 
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -21,11 +20,8 @@ type DynamoDBService struct {
 
 // NewDynamoDBService padrão, usa config.LoadDefaultConfig
 func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBService, error) {
-	project := os.Getenv("PROJECT_NAME")
-	env := os.Getenv("ENVIRONMENT")
-	table_name := fmt.Sprintf("%s-%s-%s", project, env, table)
 	client := GetDynamoDBCLient()
-	return &DynamoDBService{Client: client, Table: table_name, PKKey: pkKey, SKKey: skKey}, nil
+	return &DynamoDBService{Client: client, Table: table, PKKey: pkKey, SKKey: skKey}, nil
 }
 
 // PutItem insere um item na tabela DynamoDB.

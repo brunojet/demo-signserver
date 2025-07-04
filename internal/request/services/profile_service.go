@@ -6,18 +6,18 @@ import (
 )
 
 type ProfileService struct {
-	service *repositories.SignProfileService
+	service *repositories.ProfileRepository
 }
 
-var profile_service *repositories.SignProfileService = nil
+var profile_service *repositories.ProfileRepository = nil
 
-func SetProfileServiceMock(mock *repositories.SignProfileService) {
+func SetProfileServiceMock(mock *repositories.ProfileRepository) {
 	profile_service = mock
 }
 
-func getProfileService() *repositories.SignProfileService {
+func getProfileService() *repositories.ProfileRepository {
 	if profile_service == nil {
-		profile_service = repositories.NewSignProfileService("")
+		profile_service = repositories.NewProfileRepository()
 	}
 	return profile_service
 }

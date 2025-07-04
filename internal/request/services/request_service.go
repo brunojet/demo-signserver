@@ -12,14 +12,14 @@ import (
 )
 
 type RequestService struct {
-	service   *repositories.SignRequestService
+	service   *repositories.RequestRepository
 	s3Service *storage_services.S3Service
 }
 
-var request_service *repositories.SignRequestService = nil
+var request_service *repositories.RequestRepository = nil
 var s3_service *storage_services.S3Service = nil
 
-func SetRequestServiceMock(mock *repositories.SignRequestService) {
+func SetRequestServiceMock(mock *repositories.RequestRepository) {
 	request_service = mock
 }
 
@@ -27,9 +27,9 @@ func SetS3ServiceMock(mock *storage_services.S3Service) {
 	s3_service = mock
 }
 
-func getRequestService() *repositories.SignRequestService {
+func getRequestService() *repositories.RequestRepository {
 	if request_service == nil {
-		request_service = repositories.NewSignRequestService()
+		request_service = repositories.NewRequestRepository()
 	}
 	return request_service
 }
@@ -52,7 +52,7 @@ func NewRequestService() *RequestService {
 }
 
 func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.SignRequestResponse, error) {
-	profileRepo := repositories.NewSignProfileService("")
+	profileRepo := repositories.NewProfileRepository()
 	profile, err := profileRepo.GetProfileByID(*request.SignerProfileId)
 	if err != nil || profile == nil {
 		return nil, errors.New("profile_id não encontrado")

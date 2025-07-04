@@ -9,33 +9,40 @@ import (
 	db_services "demo-signserver/pkg/repository/services"
 )
 
-const SIGNER_KEY = "signer"
-const PROFILE_ID_KEY = "profile_id"
+const (
+	PROFILE_RESOURCE_NAME = "profile_table"
+	SIGNER_KEY            = "signer"
+	PROFILE_ID_KEY        = "profile_id"
+)
 
-type SignProfileServiceInterface interface {
+type ProfileRepositoryInterface interface {
 	CreateProfile(profile *domain.SignerProfile) (string, error)
 	GetProfileByID(ID string) (*domain.SignerProfile, error)
 	UpdateProfile(ID string, profile *domain.SignerProfile) error
 }
-type SignProfileService struct {
+type ProfileRepository struct {
 	Dynamo *db_services.DynamoDBService
 }
 
-func NewSignProfileService(configInstance string) *SignProfileService {
+func NewProfileRepositoryCustom(configInstance string) *ProfileRepository {
 	cfg := config.GetConfigInstance(configInstance)
-	resource := cfg.GetResource("profile_table")
+	resource := cfg.GetResource(PROFILE_RESOURCE_NAME)
 	dynamo, err := db_services.NewDynamoDBService(resource.Name, SIGNER_KEY, PROFILE_ID_KEY)
 	if err != nil {
 		log.Fatalf("Erro ao inicializar DynamoDBService: %v", err)
 	}
-	return &SignProfileService{Dynamo: dynamo}
+	return &ProfileRepository{Dynamo: dynamo}
 }
 
-func (s *SignProfileService) CreateProfile(profile *domain.SignerProfile) error {
+func NewProfileRepository() *ProfileRepository {
+	return NewProfileRepositoryCustom(config.DefaultInstanceName)
+}
+
+func (s *ProfileRepository) CreateProfile(profile *domain.SignerProfile) error {
 	return s.Dynamo.CreateItem(context.Background(), profile)
 }
 
-func (s *SignProfileService) GetProfileByID(ID string) (*domain.SignerProfile, error) {
+func (s *ProfileRepository) GetProfileByID(ID string) (*domain.SignerProfile, error) {
 	var profile domain.SignerProfile
 	err := s.Dynamo.GetItem(context.Background(), ID, &profile)
 	if err != nil {
@@ -44,6 +51,6 @@ func (s *SignProfileService) GetProfileByID(ID string) (*domain.SignerProfile, e
 	return &profile, nil
 }
 
-func (s *SignProfileService) UpdateProfile(ID string, profile *domain.SignerProfile) error {
+func (s *ProfileRepository) UpdateProfile(ID string, profile *domain.SignerProfile) error {
 	return s.Dynamo.UpdateItem(context.Background(), ID, profile)
 }

@@ -12,19 +12,19 @@ var (
 )
 
 const (
-	defaultInstanceName = "default"
+	DefaultInstanceName = "default"
 	defaultAwsRegion    = "us-east-1"
 )
 
 func LoadDefaultConfig() *Config {
-	if _, exists := configInstances[defaultInstanceName]; !exists {
-		log.Printf("Default config instance '%s' not found, creating new instance", defaultInstanceName)
-		configInstances[defaultInstanceName] = LoadConfig(defaultInstanceName)
+	if _, exists := configInstances[DefaultInstanceName]; !exists {
+		log.Printf("Default config instance '%s' not found, creating new instance", DefaultInstanceName)
+		configInstances[DefaultInstanceName] = LoadConfig(DefaultInstanceName)
 	} else {
-		log.Printf("Using existing default config instance '%s'", defaultInstanceName)
+		log.Printf("Using existing default config instance '%s'", DefaultInstanceName)
 	}
 
-	return configInstances[defaultInstanceName]
+	return configInstances[DefaultInstanceName]
 }
 
 type Config struct {
@@ -70,7 +70,7 @@ func NewConfigInstance(name string) *Config {
 // Recupera uma instância de configuração pelo nome
 func GetConfigInstance(name string) *Config {
 	if name == "" {
-		name = defaultInstanceName
+		name = DefaultInstanceName
 	}
 	cfg, ok := configInstances[name]
 
