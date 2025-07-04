@@ -16,11 +16,14 @@ const (
 	defaultAwsRegion    = "us-east-1"
 )
 
-func init() {
-	configInstances[defaultInstanceName] = LoadConfig(defaultInstanceName)
-}
-
 func LoadDefaultConfig() *Config {
+	if _, exists := configInstances[defaultInstanceName]; !exists {
+		log.Printf("Default config instance '%s' not found, creating new instance", defaultInstanceName)
+		configInstances[defaultInstanceName] = LoadConfig(defaultInstanceName)
+	} else {
+		log.Printf("Using existing default config instance '%s'", defaultInstanceName)
+	}
+
 	return configInstances[defaultInstanceName]
 }
 
@@ -65,9 +68,16 @@ func NewConfigInstance(name string) *Config {
 }
 
 // Recupera uma instância de configuração pelo nome
-func GetConfigInstance(name string) (*Config, bool) {
+func GetConfigInstance(name string) *Config {
+	if name == "" {
+		name = defaultInstanceName
+	}
 	cfg, ok := configInstances[name]
-	return cfg, ok
+
+	if !ok {
+		log.Printf("Config instance '%s' not found, creating new instance", name)
+	}
+	return cfg
 }
 
 func LoadConfig(instanceName string) *Config {
@@ -88,9 +98,13 @@ func LoadConfig(instanceName string) *Config {
 }
 
 // Recupera um recurso pelo nome. Retorna o ResourceInfo e true se existir, ou false se não encontrado.
-func (c *Config) GetResource(name string) (ResourceInfo, bool) {
+func (c *Config) GetResource(name string) *ResourceInfo {
 	res, ok := c.Resources[name]
-	return res, ok
+	if !ok {
+		log.Printf("Resource '%s' not found in config instance '%s'", name, c.ProjectName)
+		return nil
+	}
+	return &res
 }
 
 // Adiciona ou atualiza um recurso no map Resources

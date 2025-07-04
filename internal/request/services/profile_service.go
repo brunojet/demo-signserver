@@ -17,7 +17,7 @@ func SetProfileServiceMock(mock *repositories.SignProfileService) {
 
 func getProfileService() *repositories.SignProfileService {
 	if profile_service == nil {
-		profile_service = repositories.NewSignProfileService()
+		profile_service = repositories.NewSignProfileService("")
 	}
 	return profile_service
 }

@@ -52,7 +52,7 @@ func NewRequestService() *RequestService {
 }
 
 func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.SignRequestResponse, error) {
-	profileRepo := repositories.NewSignProfileService()
+	profileRepo := repositories.NewSignProfileService("")
 	profile, err := profileRepo.GetProfileByID(*request.SignerProfileId)
 	if err != nil || profile == nil {
 		return nil, errors.New("profile_id não encontrado")

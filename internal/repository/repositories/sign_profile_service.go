@@ -4,8 +4,8 @@ import (
 	"context"
 	"demo-signserver/internal/repository/domain"
 	"log"
-	"os"
 
+	"demo-signserver/pkg/config"
 	db_services "demo-signserver/pkg/repository/services"
 )
 
@@ -21,9 +21,10 @@ type SignProfileService struct {
 	Dynamo *db_services.DynamoDBService
 }
 
-func NewSignProfileService() *SignProfileService {
-	table := os.Getenv("SIGN_PROFILE_TABLE")
-	dynamo, err := db_services.NewDynamoDBService(table, SIGNER_KEY, PROFILE_ID_KEY)
+func NewSignProfileService(configInstance string) *SignProfileService {
+	cfg := config.GetConfigInstance(configInstance)
+	resource := cfg.GetResource("signer_profile_table")
+	dynamo, err := db_services.NewDynamoDBService(resource.Name, SIGNER_KEY, PROFILE_ID_KEY)
 	if err != nil {
 		log.Fatalf("Erro ao inicializar DynamoDBService: %v", err)
 	}

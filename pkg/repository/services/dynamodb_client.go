@@ -4,7 +4,6 @@ import (
 	"context"
 	"demo-signserver/pkg/observability"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -16,14 +15,6 @@ import (
 var (
 	client *dynamodb.Client
 )
-
-func init() {
-	var err error
-	client, err = newDynamoDBClient(context.Background())
-	if err != nil {
-		fmt.Printf("Error initializing DynamoDB client: %v\n", err)
-	}
-}
 
 type resolverV2 struct{}
 
@@ -45,19 +36,24 @@ func newDynamoDBClient(ctx context.Context) (*dynamodb.Client, error) {
 			optFns.BaseEndpoint = aws.String(endpoint)
 			optFns.EndpointResolverV2 = &resolverV2{}
 		}
+		observability.LogInfo(
+			"DynamoDB client information",
+			map[string]interface{}{
+				"region":   cfg.Region,
+				"endpoint": optFns.BaseEndpoint,
+			},
+		)
 	})
-	observability.LogInfo(
-		"DynamoDB client created",
-		map[string]interface{}{
-			"region": cfg.Region,
-		},
-	)
 	return client, err
 }
 
 func GetDynamoDBCLient() *dynamodb.Client {
 	if client == nil {
-		log.Fatalf("DynamoDB client not initialized, calling NewDynamoDBClient")
+		var err error
+		client, err = newDynamoDBClient(context.Background())
+		if err != nil {
+			fmt.Printf("Error initializing DynamoDB client: %v\n", err)
+		}
 	}
 	return client
 }

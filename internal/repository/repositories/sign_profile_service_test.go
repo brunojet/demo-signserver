@@ -28,7 +28,7 @@ func init() {
 }
 
 func TestSignProfileService_CRUD(t *testing.T) {
-	service := NewSignProfileService()
+	service := NewSignProfileService("")
 
 	desc := "Dispositivos Postivo perfil 001"
 	profileId := "015"
