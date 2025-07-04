@@ -42,7 +42,7 @@ type SignerError struct {
 type RequestHistoryEntry struct {
 	CreatedAt  string       `json:"created_at" dynamodbav:"timestamp"`
 	SignerStep *SignerStep  `json:"sign_step" dynamodbav:"sign_step,omitempty"`
-	Error      *SignerError `json:"error" dynamodbav:"error"`
+	Error      *SignerError `json:"error,omitempty" dynamodbav:"error"`
 }
 
 type SignerRequestInerface interface {
