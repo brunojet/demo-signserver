@@ -14,7 +14,6 @@ import (
 type RequestService struct {
 	service   *repositories.SignRequestService
 	s3Service *storage_services.S3Service
-	bucket    string
 }
 
 var request_service *repositories.SignRequestService = nil
@@ -48,7 +47,8 @@ func getS3Service(bucket string) *storage_services.S3Service {
 
 func NewRequestService() *RequestService {
 	bucket := os.Getenv("SIGN_STORAGE_BUCKET")
-	return &RequestService{service: getRequestService(), s3Service: getS3Service(bucket), bucket: bucket}
+	s3_service := getS3Service(bucket)
+	return &RequestService{service: getRequestService(), s3Service: s3_service}
 }
 
 func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.SignRequestResponse, error) {
@@ -58,13 +58,13 @@ func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.Sig
 		return nil, errors.New("profile_id não encontrado")
 	}
 
-	ID, url, err := s.GenerateUniquePresignedURL()
+	ID, url, err := s.generatePresignedPutURL()
 
 	if err != nil || ID == "" {
 		return nil, errors.New("erro ao gerar URL pré-assinada")
 	}
 
-	request.SetUnsingedBucketInfo(s.bucket, ID)
+	request.SetUnsingedBucketInfo(s.s3Service.Bucket, ID)
 	request.SetID(ID)
 	err = s.service.CreateRequest(request)
 
@@ -96,25 +96,28 @@ func (s *RequestService) GetSignerStatusByID(id string) (*domain.SignGetResponse
 		ID:           record.ID,
 		SignerStatus: *record.SignerStatus,
 		SignerError:  record.GetLastError(),
-		HttpMethod:   domain.HttpMethodGet,
-		DownloadURL:  s.getPresignedUrl(record.SignedFile),
 	}
+
+	s.getPresignedGetUrl(response, record.SignedFile)
+
 	return response, err
 }
 
-func (s *RequestService) getPresignedUrl(bucketInfo *domain.BucketInfo) string {
-	if bucketInfo == nil || bucketInfo.BucketName == "" || bucketInfo.ObjectKey == "" {
-		return ""
+func (s *RequestService) getPresignedGetUrl(response *domain.SignGetResponse, bucketInfo *domain.BucketInfo) {
+	if response == nil || bucketInfo == nil || bucketInfo.ObjectKey == "" {
+		return
 	}
-	url, err := s.s3Service.GeneratePresignedPutURL(bucketInfo.ObjectKey, 15*time.Minute)
+	url, err := s.s3Service.GeneratePresignedGetURL(bucketInfo.ObjectKey, 15*time.Minute)
 	if err != nil {
-		return ""
+		return
 	}
-	return url
+	httpMethod := domain.HttpMethodGet
+	response.HttpMethod = &httpMethod
+	response.DownloadURL = &url
 }
 
 // Gera um nome de arquivo único, gera URL pré-assinada e retorna (nome, url, erro)
-func (s *RequestService) GenerateUniquePresignedURL() (string, string, error) {
+func (s *RequestService) generatePresignedPutURL() (string, string, error) {
 	fileName := uuid.New().String()
 	url, err := s.s3Service.GeneratePresignedPutURL(fileName, 15*time.Minute)
 	if err != nil {

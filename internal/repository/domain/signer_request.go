@@ -54,7 +54,7 @@ type SignerRequestInerface interface {
 type SignRequest struct {
 	domain.BaseDomain
 	SignerProfileId *string                `json:"profile_id,omitempty" dynamodbav:"signer_profile_id,omitempty"`
-	SignerStatus    *SignerStep            `json:"signer_status,omitempty" dynamodbav:"signer_status,omitempty"`
+	SignerStatus    *SignerStep            `json:"status,omitempty" dynamodbav:"status,omitempty"`
 	UnsignedFile    *BucketInfo            `json:"unsigned_file,omitempty" dynamodbav:"unsigned_file,omitempty"`
 	SignedFile      *BucketInfo            `json:"signed_file,omitempty" dynamodbav:"signed_file,omitempty"`
 	WebhookURL      *string                `json:"webhook_url,omitempty" dynamodbav:"webhook_url,omitempty"`
@@ -63,18 +63,18 @@ type SignRequest struct {
 
 type SignRequestResponse struct {
 	ID           string       `json:"id" binding:"required"`
-	SignerStatus SignerStep   `json:"signer_status,omitempty" binding:"required"`
-	SignerError  *SignerError `json:"signer_error,omitempty"`
+	SignerStatus SignerStep   `json:"status,omitempty" binding:"required"`
+	SignerError  *SignerError `json:"error,omitempty"`
 	HttpMethod   HttpMethod   `json:"method" binding:"required,oneof=PUT"`
 	UploadURL    string       `json:"upload_url" binding:"required,url"`
 }
 
 type SignGetResponse struct {
 	ID           string       `json:"id" binding:"required"`
-	SignerStatus SignerStep   `json:"signer_status,omitempty" binding:"required"`
-	SignerError  *SignerError `json:"signer_error,omitempty"`
-	HttpMethod   HttpMethod   `json:"method" binding:"required,oneof=GET"`
-	DownloadURL  string       `json:"download_url" binding:"required,url"`
+	SignerStatus SignerStep   `json:"status,omitempty" binding:"required"`
+	SignerError  *SignerError `json:"error,omitempty"`
+	HttpMethod   *HttpMethod  `json:"method,omitempty" binding:"required,oneof=GET"`
+	DownloadURL  *string      `json:"download_url,omitempty" binding:"required,url"`
 }
 
 func (s *SignRequest) SetUnsingedBucketInfo(bucketName, objectKey string) {
