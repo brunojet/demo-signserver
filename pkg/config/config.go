@@ -75,7 +75,7 @@ func GetConfigInstance(name string) *Config {
 	cfg, ok := configInstances[name]
 
 	if !ok {
-		log.Printf("Config instance '%s' not found, creating new instance", name)
+		log.Fatalf("Config instance '%s' not found, creating new instance", name)
 	}
 	return cfg
 }

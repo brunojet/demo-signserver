@@ -23,7 +23,7 @@ type SignProfileService struct {
 
 func NewSignProfileService(configInstance string) *SignProfileService {
 	cfg := config.GetConfigInstance(configInstance)
-	resource := cfg.GetResource("signer_profile_table")
+	resource := cfg.GetResource("profile_table")
 	dynamo, err := db_services.NewDynamoDBService(resource.Name, SIGNER_KEY, PROFILE_ID_KEY)
 	if err != nil {
 		log.Fatalf("Erro ao inicializar DynamoDBService: %v", err)
