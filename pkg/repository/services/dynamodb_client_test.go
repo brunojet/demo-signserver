@@ -18,10 +18,10 @@ func init() {
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
 }
 
-func getTestDynamoDBClient(tableName string, sk string) (*dynamodb.Client, error) {
+func getTestDynamoDBClient(tableName string, sk string) *dynamodb.Client {
 	initTestTable(tableName, sk)
-	client, err := NewDynamoDBClient(context.Background(), tableName)
-	return client, err
+	client := GetDynamoDBCLient()
+	return client
 }
 
 func initTestTable(tableName string, sk string) {
@@ -40,7 +40,6 @@ func initTestTable(tableName string, sk string) {
 
 func TestNewDynamoDBClient_Success(t *testing.T) {
 	os.Setenv("DYNAMODB_ENDPOINT", "http://localhost:8001")
-	client, err := getTestDynamoDBClient("TestTable", "")
-	assert.NoError(t, err)
+	client := getTestDynamoDBClient("TestTable", "")
 	assert.NotNil(t, client)
 }

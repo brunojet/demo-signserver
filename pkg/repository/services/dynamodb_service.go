@@ -24,12 +24,7 @@ func NewDynamoDBService(table string, pkKey string, skKey string) (*DynamoDBServ
 	project := os.Getenv("PROJECT_NAME")
 	env := os.Getenv("ENVIRONMENT")
 	table_name := fmt.Sprintf("%s-%s-%s", project, env, table)
-	client, err := NewDynamoDBClient(context.Background(), table_name)
-
-	if err != nil {
-		return nil, err
-	}
-
+	client := GetDynamoDBCLient()
 	return &DynamoDBService{Client: client, Table: table_name, PKKey: pkKey, SKKey: skKey}, nil
 }
 
