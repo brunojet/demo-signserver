@@ -68,9 +68,10 @@ func NewAccumulatorSink() *AccumulatorSink {
 func (a *AccumulatorSink) Send(m Metric) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if m.Type == Counter {
+	switch m.Type {
+	case Counter:
 		a.store[m.Name] += m.Value
-	} else if m.Type == Gauge {
+	case Gauge:
 		a.store[m.Name] = m.Value
 	}
 }

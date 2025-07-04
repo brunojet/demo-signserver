@@ -26,7 +26,7 @@ func NewProfileService() *ProfileService {
 	return &ProfileService{service: getProfileService()}
 }
 
-func (s *ProfileService) CreateProfile(profile *domain.SignerProfile) (string, error) {
+func (s *ProfileService) CreateProfile(profile *domain.SignerProfile) error {
 	return s.service.CreateProfile(profile)
 }
 

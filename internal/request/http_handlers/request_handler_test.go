@@ -15,6 +15,7 @@ import (
 	db_services "demo-signserver/pkg/repository/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 var r *gin.Engine
@@ -87,11 +88,10 @@ func TestRequestHandler_CreateRequest_Success(t *testing.T) {
 	profileReq, _ := http.NewRequest("POST", "/profiles", bytes.NewBuffer(bProfile))
 	profileReq.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(p, profileReq)
-	if p.Code != http.StatusCreated {
-		t.Fatalf("Expected status 201 for profile, got %d", p.Code)
-	}
+	assert.Equal(t, http.StatusCreated, p.Code, "Expected status 201 for profile creation")
 	var profileResp map[string]interface{}
-	_ = json.Unmarshal(p.Body.Bytes(), &profileResp)
+	err := json.Unmarshal(p.Body.Bytes(), &profileResp)
+	assert.NoError(t, err, "Error parsing profile response body")
 	profileID, _ := profileResp["id"].(string)
 
 	// Agora cria a request
@@ -101,26 +101,16 @@ func TestRequestHandler_CreateRequest_Success(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/requests", bytes.NewBuffer(b))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
-	if w.Code != http.StatusCreated {
-		t.Errorf("Expected status 201, got %d", w.Code)
-	}
+	assert.Equal(t, http.StatusCreated, w.Code, "Expected status 201 for request creation")
 	var resp map[string]interface{}
-	log.Println("Response Body:", w.Body.String())
-	err := json.Unmarshal(w.Body.Bytes(), &resp)
-
-	if err != nil {
-		t.Fatalf("Error parsing response: %v", err)
-	}
-	if resp["id"] == nil || resp["id"] == "" {
-		t.Errorf("Expected id in response, got %v", resp)
-	}
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err, "Error parsing response body")
+	assert.NotEmpty(t, resp[db_services.ID_KEY], "Expected id in response")
 }
 
 func TestRequestHandler_GetRequestByID_NotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/requests/inexistente", nil)
 	r.ServeHTTP(w, req)
-	if w.Code != http.StatusNotFound {
-		t.Errorf("Expected status 404, got %d", w.Code)
-	}
+	assert.Equal(t, http.StatusNotFound, w.Code, "Expected status 404 for non-existent request")
 }

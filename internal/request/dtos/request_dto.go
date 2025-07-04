@@ -27,12 +27,23 @@ func (d *CreateSignRequestDTO) GetDomainCreateSignRequest() *domain.SignRequest 
 
 type GetResponseDTO struct {
 	ID           string              `json:"id" binding:"required"`
-	SignerStatus domain.SignerStep   `json:"signer_status,omitempty" binding:"required"`
-	SignerError  *domain.SignerError `json:"signer_error,omitempty"`
-	DownloadURL  *string             `json:"pre_signed_url" binding:"required,url"`
+	SignerStatus domain.SignerStep   `json:"status,omitempty" binding:"required"`
+	SignerError  *domain.SignerError `json:"error,omitempty"`
+	DownloadURL  string              `json:"pre_signed_url" binding:"required,url"`
 }
 
-func NewGetResponseDTOFromDomain(req *domain.SignRequest, downloadUrl *string) *GetResponseDTO {
+func NewCreateResponseDTOFromDomain(req *domain.SignRequest, uploadUrl string) *CreateSignResponseDTO {
+	if req == nil {
+		return nil
+	}
+
+	return &CreateSignResponseDTO{
+		ID:        req.ID,
+		UploadURL: uploadUrl,
+	}
+}
+
+func NewGetResponseDTOFromDomain(req *domain.SignRequest, downloadUrl string) *GetResponseDTO {
 	if req == nil {
 		return nil
 	}

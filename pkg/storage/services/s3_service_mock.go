@@ -3,7 +3,7 @@
 // Exemplo de uso:
 //
 //	mock := &MockPresignClient{URL: "https://mock-url"}
-package storage_mock
+package storage_services
 
 import (
 	"context"
@@ -19,6 +19,14 @@ type MockPresignClient struct {
 
 // PresignPutObject implementa a interface do PresignClient do S3, usando o comportamento customizado se definido.
 func (m *MockPresignClient) PresignPutObject(_ context.Context, _ *s3.PutObjectInput, _ ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error) {
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	return &v4.PresignedHTTPRequest{URL: m.URL}, nil
+}
+
+// PresignGetObject implementa a interface do PresignClient do S3 para GET, usando o comportamento customizado se definido.
+func (m *MockPresignClient) PresignGetObject(_ context.Context, _ *s3.GetObjectInput, _ ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error) {
 	if m.Err != nil {
 		return nil, m.Err
 	}

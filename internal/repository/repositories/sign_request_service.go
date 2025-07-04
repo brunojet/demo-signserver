@@ -16,14 +16,14 @@ type SignRequestService struct {
 
 func NewSignRequestService() *SignRequestService {
 	table := os.Getenv("SIGN_REQUEST_TABLE")
-	dynamo, err := db_services.NewDynamoDBService(table, "", "")
+	dynamo, err := db_services.NewDynamoDBService(table, "id", "")
 	if err != nil {
 		log.Fatalf("Erro ao inicializar DynamoDBService: %v", err)
 	}
 	return &SignRequestService{Dynamo: dynamo}
 }
 
-func (s *SignRequestService) CreateRequest(request *domain.SignRequest) (string, error) {
+func (s *SignRequestService) CreateRequest(request *domain.SignRequest) error {
 	return s.Dynamo.CreateItem(context.Background(), request)
 }
 

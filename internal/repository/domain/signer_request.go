@@ -25,6 +25,13 @@ const (
 	SignerStepSigningFailed     SignerStep = "signing_failed"
 )
 
+type HttpMethod string
+
+const (
+	HttpMethodPut HttpMethod = "PUT"
+	HttpMethodGet HttpMethod = "GET"
+)
+
 // SignerError representa um erro ocorrido em um passo do fluxo.
 type SignerError struct {
 	Code    string `json:"code" dynamodbav:"code"`
@@ -35,7 +42,7 @@ type SignerError struct {
 type RequestHistoryEntry struct {
 	CreatedAt  string       `json:"created_at" dynamodbav:"timestamp"`
 	SignerStep *SignerStep  `json:"sign_step" dynamodbav:"sign_step,omitempty"`
-	Error      *SignerError `json:"error" dynamodbav:"error"`
+	Error      *SignerError `json:"error,omitempty" dynamodbav:"error"`
 }
 
 type SignerRequestInerface interface {
@@ -47,11 +54,36 @@ type SignerRequestInerface interface {
 type SignRequest struct {
 	domain.BaseDomain
 	SignerProfileId *string                `json:"profile_id,omitempty" dynamodbav:"signer_profile_id,omitempty"`
-	SignerStatus    *SignerStep            `json:"signer_status,omitempty" dynamodbav:"signer_status,omitempty"`
+	SignerStatus    *SignerStep            `json:"status,omitempty" dynamodbav:"status,omitempty"`
 	UnsignedFile    *BucketInfo            `json:"unsigned_file,omitempty" dynamodbav:"unsigned_file,omitempty"`
 	SignedFile      *BucketInfo            `json:"signed_file,omitempty" dynamodbav:"signed_file,omitempty"`
 	WebhookURL      *string                `json:"webhook_url,omitempty" dynamodbav:"webhook_url,omitempty"`
 	History         *[]RequestHistoryEntry `json:"history,omitempty" dynamodbav:"history,omitempty"`
+}
+
+type SignRequestResponse struct {
+	ID           string       `json:"id" binding:"required"`
+	SignerStatus SignerStep   `json:"status,omitempty" binding:"required"`
+	SignerError  *SignerError `json:"error,omitempty"`
+	HttpMethod   HttpMethod   `json:"method" binding:"required,oneof=PUT"`
+	UploadURL    string       `json:"upload_url" binding:"required,url"`
+}
+
+type SignGetResponse struct {
+	ID           string       `json:"id" binding:"required"`
+	SignerStatus SignerStep   `json:"status,omitempty" binding:"required"`
+	SignerError  *SignerError `json:"error,omitempty"`
+	HttpMethod   *HttpMethod  `json:"method,omitempty" binding:"required,oneof=GET"`
+	DownloadURL  *string      `json:"download_url,omitempty" binding:"required,url"`
+}
+
+func (s *SignRequest) SetUnsingedBucketInfo(bucketName, objectKey string) {
+	s.UnsignedFile = &BucketInfo{
+		BucketName: bucketName,
+		ObjectKey:  objectKey,
+		Size:       0,
+		SHA256:     "",
+	}
 }
 
 func (s *SignRequest) SetSignerStatus(step SignerStep, err *SignerError) {

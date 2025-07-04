@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -40,15 +42,11 @@ func TestSignProfileService_CRUD(t *testing.T) {
 		Download:    &domain.TransferInfo{URL: "https://example.com/download", Tries: 3, Interval: 5},
 	}
 
-	ID, err := service.CreateProfile(profile)
-	if err != nil {
-		t.Fatalf("Erro ao criar perfil: %v", err)
-	}
+	err := service.CreateProfile(profile)
+	assert.NoError(t, err)
 
-	fetched, err := service.GetProfileByID(ID)
-	if err != nil {
-		t.Fatalf("Erro ao buscar perfil: %v", err)
-	}
+	fetched, err := service.GetProfileByID(profile.ID)
+	assert.NoError(t, err)
 	if *fetched.Description != *profile.Description {
 		t.Errorf("Nome esperado %s, obtido %s", *profile.Description, *fetched.Description)
 	}
@@ -58,12 +56,9 @@ func TestSignProfileService_CRUD(t *testing.T) {
 		Description: &updatedDesc,
 	}
 
-	err = service.UpdateProfile(ID, update)
-	if err != nil {
-		t.Fatalf("Erro ao atualizar perfil: %v", err)
-	}
-
-	fetched, err = service.GetProfileByID(ID)
+	err = service.UpdateProfile(profile.ID, update)
+	assert.NoError(t, err)
+	fetched, err = service.GetProfileByID(profile.ID)
 	if err != nil {
 		t.Fatalf("Erro ao buscar perfil atualizado: %v", err)
 	}

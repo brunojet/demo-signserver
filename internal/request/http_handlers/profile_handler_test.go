@@ -67,7 +67,7 @@ func TestCreateProfile_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rProfile.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusCreated, w.Code)
-	assert.Contains(t, w.Body.String(), "id")
+	assert.Contains(t, w.Body.String(), db_services.ID_KEY)
 }
 
 func TestGetProfileByID_NotFound(t *testing.T) {
@@ -84,7 +84,6 @@ func TestUpdateProfile_ValidationError(t *testing.T) {
 	req, _ := http.NewRequest("PATCH", "/profiles/123", body)
 	req.Header.Set("Content-Type", "application/json")
 	rProfile.ServeHTTP(w, req)
-	// Como não existe o perfil, deve retornar erro interno ou not found
 	assert.True(t, w.Code == http.StatusInternalServerError || w.Code == http.StatusBadRequest)
 }
 
@@ -108,7 +107,7 @@ func TestUpdateProfile_Success(t *testing.T) {
 	var resp map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.NoError(t, err)
-	id := resp["id"].(string)
+	id := resp[db_services.ID_KEY].(string)
 
 	// Agora faz o update
 	w2 := httptest.NewRecorder()
