@@ -3,6 +3,7 @@ package config
 import (
 	"demo-signserver/pkg/observability"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -12,8 +13,6 @@ var (
 
 const (
 	defaultInstanceName = "default"
-	defaultProjectName  = "demo"
-	defaultEnvironment  = "dev"
 	defaultAwsRegion    = "us-east-1"
 )
 
@@ -35,8 +34,8 @@ type Config struct {
 
 type ResourceInfo struct {
 	Name       string
-	Type       string            // Ex: "table", "bucket", etc
-	Parameters map[string]string // Parâmetros adicionais, como ARN, etc
+	Type       string // Ex: "table", "bucket", etc
+	Parameters any    // Pode ser qualquer struct, map, etc
 }
 
 func getEnvEx(key, defaultValue string) string {
@@ -47,6 +46,13 @@ func getEnvEx(key, defaultValue string) string {
 	return value
 }
 
+func OsGetEnvPanic(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("Environment variable %s is not set", key)
+	}
+	return value
+}
 func resourceNameBuilder(projectName, environment, resource string) string {
 	return fmt.Sprintf("%s-%s-%s", projectName, environment, resource)
 }
@@ -65,8 +71,8 @@ func GetConfigInstance(name string) (*Config, bool) {
 }
 
 func LoadConfig(instanceName string) *Config {
-	projectName := getEnvEx("PROJECT_NAME", defaultProjectName)
-	environment := getEnvEx("ENVIRONMENT", defaultEnvironment)
+	projectName := OsGetEnvPanic("PROJECT_NAME")
+	environment := OsGetEnvPanic("ENVIRONMENT")
 
 	config := &Config{
 		ProjectName:      projectName,
@@ -93,6 +99,17 @@ func (c *Config) SetResource(name string, info ResourceInfo) {
 		c.Resources = make(map[string]ResourceInfo)
 	}
 	c.Resources[name] = info
+}
+
+// Atualiza ou adiciona parâmetros a um recurso existente
+func (c *Config) SetResourceParameters(name string, params any) bool {
+	res, ok := c.Resources[name]
+	if !ok {
+		return false
+	}
+	res.Parameters = params
+	c.Resources[name] = res
+	return true
 }
 
 func (c *Config) ResourceNameBuilder(resource string) string {
