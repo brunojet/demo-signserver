@@ -20,7 +20,7 @@ func TestTransferInfoDTO_Validation(t *testing.T) {
 }
 
 func TestCreateSignerProfileDTO_GetDomainCreateSignerProfile(t *testing.T) {
-	dto := CreateSignerProfileDTO{
+	dto := CreateProfileDTO{
 		Signer:      domain.SignerPositivo,
 		ProfileId:   "123",
 		Description: "desc",
@@ -44,7 +44,7 @@ func TestUpdateSignerProfileDTO_GetDomainUpdateSignerProfile(t *testing.T) {
 	desc := "nova desc"
 	upload := &TransferInfoDTO{Url: "http://a.com", Tries: 1, Interval: 5}
 	download := &TransferInfoDTO{Url: "http://b.com", Tries: 2, Interval: 10}
-	dto := UpdateSignerProfileDTO{
+	dto := UpdateProfileDTO{
 		Description: &desc,
 		Upload:      upload,
 		Download:    download,

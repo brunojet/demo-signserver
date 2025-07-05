@@ -27,9 +27,9 @@ type ProfileRepository struct {
 func NewProfileRepositoryCustom(configInstance string) *ProfileRepository {
 	cfg := config.GetConfigInstance(configInstance)
 	resource := cfg.GetResource(PROFILE_RESOURCE_NAME)
-	dynamo, err := db_services.NewDynamoDBService(resource.Name, SIGNER_KEY, PROFILE_ID_KEY)
-	if err != nil {
-		log.Fatalf("Erro ao inicializar DynamoDBService: %v", err)
+	dynamo := db_services.NewDynamoDBService(resource.Name, SIGNER_KEY, PROFILE_ID_KEY)
+	if dynamo == nil {
+		log.Fatalf("Erro ao inicializar DynamoDBService")
 	}
 	return &ProfileRepository{Dynamo: dynamo}
 }

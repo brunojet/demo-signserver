@@ -4,21 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/google/uuid"
 )
 
-type DBServices struct {
+type TableServices struct {
 	Client *dynamodb.Client
 }
 
-func NewDB() *DBServices {
+func NewDB() *TableServices {
 	client := GetDynamoDBCLient()
-	return &DBServices{Client: client}
+	return &TableServices{Client: client}
 }
 
-func (db *DBServices) TableExists(ctx context.Context, table string) bool {
+func (db *TableServices) TableExists(ctx context.Context, table string) bool {
 	_, err := db.Client.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
 	if err == nil {
 		return true
@@ -31,7 +33,7 @@ func (db *DBServices) TableExists(ctx context.Context, table string) bool {
 }
 
 // DeleteTable remove a tabela se ela existir (útil para testes).
-func (db *DBServices) DeleteTable(ctx context.Context, table string) error {
+func (db *TableServices) DeleteTable(ctx context.Context, table string) error {
 	if !db.TableExists(ctx, table) {
 		return nil
 	}
@@ -50,7 +52,7 @@ func (db *DBServices) DeleteTable(ctx context.Context, table string) error {
 }
 
 // CreateTable cria uma tabela DynamoDB com pk obrigatória e sk opcional (sempre usando nomes físicos pk/sk).
-func (db *DBServices) CreateTable(ctx context.Context, table string, skKey string) error {
+func (db *TableServices) CreateTable(ctx context.Context, table string, skKey string) error {
 	if db.TableExists(ctx, table) {
 		return nil
 	}
@@ -77,4 +79,15 @@ func (db *DBServices) CreateTable(ctx context.Context, table string, skKey strin
 	}
 	fmt.Printf("[DynamoDBService] Tabela %s criada com sucesso (pk/sk).\n", table)
 	return nil
+}
+
+func (db *TableServices) CreateRandomTable(ctx context.Context, skKey string) string {
+	tableName := uuid.New().String()
+	err := db.CreateTable(ctx, tableName, skKey)
+	if err != nil {
+		log.Fatalf("erro ao criar tabela aleatória %s: %v", tableName, err)
+		return ""
+	}
+	fmt.Printf("[DynamoDBService] Tabela aleatória %s criada com sucesso.\n", tableName)
+	return tableName
 }

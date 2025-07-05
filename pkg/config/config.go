@@ -28,11 +28,10 @@ func LoadDefaultConfig() *Config {
 }
 
 type Config struct {
-	ProjectName      string
-	Environment      string
-	AwsRegion        string
-	DynamoDBEndpoint string
-	Resources        map[string]ResourceInfo // Novo campo para recursos classificados
+	ProjectName string
+	Environment string
+	AwsRegion   string
+	Resources   map[string]ResourceInfo // Novo campo para recursos classificados
 }
 
 type ResourceInfo struct {
@@ -85,11 +84,10 @@ func LoadConfig(instanceName string) *Config {
 	environment := OsGetEnvPanic("ENVIRONMENT")
 
 	config := &Config{
-		ProjectName:      projectName,
-		Environment:      environment,
-		AwsRegion:        getEnvEx("AWS_REGION", defaultAwsRegion),
-		DynamoDBEndpoint: getEnvEx("DYNAMODB_ENDPOINT", ""),
-		Resources:        make(map[string]ResourceInfo), // Inicializa vazio
+		ProjectName: projectName,
+		Environment: environment,
+		AwsRegion:   getEnvEx("AWS_REGION", defaultAwsRegion),
+		Resources:   make(map[string]ResourceInfo), // Inicializa vazio
 	}
 
 	observability.LogInfo("Config inicializada", map[string]interface{}{"config": config})

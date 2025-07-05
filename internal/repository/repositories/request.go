@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"log"
 
 	"demo-signserver/internal/repository/domain"
 
@@ -21,10 +20,7 @@ type RequestRepository struct {
 func NewRequestRepositoryCustom(configInstance string) *RequestRepository {
 	cfg := config.GetConfigInstance(configInstance)
 	resource := cfg.GetResource(REQUEST_RESOURCE_NAME)
-	dynamo, err := db_services.NewDynamoDBService(resource.Name, db_services.ID_KEY, "")
-	if err != nil {
-		log.Fatalf("Erro ao inicializar DynamoDBService: %v", err)
-	}
+	dynamo := db_services.NewDynamoDBService(resource.Name, db_services.ID_KEY, db_services.NO_KEY)
 	return &RequestRepository{Dynamo: dynamo}
 }
 
