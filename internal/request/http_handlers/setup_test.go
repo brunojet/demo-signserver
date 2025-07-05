@@ -2,7 +2,6 @@ package http_handlers
 
 import (
 	"context"
-	"demo-signserver/internal/config"
 	"demo-signserver/internal/request/services"
 	db_services "demo-signserver/pkg/repository/services"
 	"fmt"
@@ -26,7 +25,6 @@ func init() {
 	os.Setenv("SIGN_STORAGE_BUCKET", "storage_handler_test")
 	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
-	config.ConfigInit()
 }
 
 func TestMain(m *testing.M) {

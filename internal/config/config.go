@@ -1,37 +1,44 @@
 package config
 
 import (
-	"demo-signserver/pkg/config"
-	"demo-signserver/pkg/observability"
+	"fmt"
+	"log"
+	"os"
+	"sync"
 )
 
-func ConfigInit() {
-	cfg := config.LoadDefaultConfig()
+var (
+	SignServerConfigInstance *SignServerConfig
+	once                     sync.Once
+)
 
-	profile_table := &config.ResourceInfo{
-		Name: cfg.ResourceNameBuilder(config.OsGetEnvPanic("SIGN_PROFILE_TABLE")),
-		Type: "dynamodb",
+type SignServerConfig struct {
+	RequestTableName  string
+	ProfileTableName  string
+	StorageBucketName string
+}
+
+func OsGetenvPanic(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("Environment variable %s is not set", key)
 	}
+	return value
+}
 
-	cfg.SetResource("profile_table", *profile_table)
+func makeResourceName(projectName, environment, resource string) string {
+	return fmt.Sprintf("%s-%s-%s", projectName, environment, OsGetenvPanic(resource))
+}
 
-	request_table := &config.ResourceInfo{
-		Name: cfg.ResourceNameBuilder(config.OsGetEnvPanic("SIGN_REQUEST_TABLE")),
-		Type: "dynamodb",
-	}
-
-	cfg.SetResource("request_table", *request_table)
-
-	storage := &config.ResourceInfo{
-		Name: cfg.ResourceNameBuilder(config.OsGetEnvPanic("SIGN_STORAGE_BUCKET")),
-		Type: "s3",
-	}
-
-	cfg.SetResource("storage", *storage)
-
-	observability.LogInfo("ConfigResource", map[string]interface{}{
-		"name":       cfg.ProjectName,
-		"info":       cfg.Environment,
-		"aws_region": cfg.AwsRegion,
+func GetSignServerConfig() *SignServerConfig {
+	once.Do(func() {
+		profileName := OsGetenvPanic("PROJECT_NAME")
+		environment := OsGetenvPanic("ENVIRONMENT")
+		SignServerConfigInstance = &SignServerConfig{
+			RequestTableName:  makeResourceName(profileName, environment, "SIGN_REQUEST_TABLE"),
+			ProfileTableName:  makeResourceName(profileName, environment, "SIGN_PROFILE_TABLE"),
+			StorageBucketName: makeResourceName(profileName, environment, "SIGN_STORAGE_BUCKET"),
+		}
 	})
+	return SignServerConfigInstance
 }

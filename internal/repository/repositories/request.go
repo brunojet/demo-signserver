@@ -2,10 +2,9 @@ package repositories
 
 import (
 	"context"
-
+	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
 
-	"demo-signserver/pkg/config"
 	db_services "demo-signserver/pkg/repository/services"
 )
 
@@ -17,15 +16,10 @@ type RequestRepository struct {
 	Dynamo *db_services.DynamoDBService
 }
 
-func NewRequestRepositoryCustom(configInstance string) *RequestRepository {
-	cfg := config.GetConfigInstance(configInstance)
-	resource := cfg.GetResource(REQUEST_RESOURCE_NAME)
-	dynamo := db_services.NewDynamoDBService(resource.Name, db_services.ID_KEY, db_services.NO_KEY)
-	return &RequestRepository{Dynamo: dynamo}
-}
-
 func NewRequestRepository() *RequestRepository {
-	return NewRequestRepositoryCustom(config.DefaultInstanceName)
+	cfg := config.GetSignServerConfig()
+	dynamo := db_services.NewDynamoDBService(cfg.RequestTableName, db_services.ID_KEY, db_services.NO_KEY)
+	return &RequestRepository{Dynamo: dynamo}
 }
 
 func (s *RequestRepository) CreateRequest(request *domain.SignRequest) error {

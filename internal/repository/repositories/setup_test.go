@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"demo-signserver/internal/config"
 	db_services "demo-signserver/pkg/repository/services"
 	"fmt"
 	"os"
@@ -18,7 +17,6 @@ func initConfig() {
 	os.Setenv("SIGN_STORAGE_BUCKET", "storage_test")
 	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
-	config.ConfigInit()
 }
 
 func TestMain(m *testing.M) {

@@ -2,10 +2,9 @@ package repositories
 
 import (
 	"context"
+	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
-	"log"
 
-	"demo-signserver/pkg/config"
 	db_services "demo-signserver/pkg/repository/services"
 )
 
@@ -24,18 +23,10 @@ type ProfileRepository struct {
 	Dynamo *db_services.DynamoDBService
 }
 
-func NewProfileRepositoryCustom(configInstance string) *ProfileRepository {
-	cfg := config.GetConfigInstance(configInstance)
-	resource := cfg.GetResource(PROFILE_RESOURCE_NAME)
-	dynamo := db_services.NewDynamoDBService(resource.Name, SIGNER_KEY, PROFILE_ID_KEY)
-	if dynamo == nil {
-		log.Fatalf("Erro ao inicializar DynamoDBService")
-	}
-	return &ProfileRepository{Dynamo: dynamo}
-}
-
 func NewProfileRepository() *ProfileRepository {
-	return NewProfileRepositoryCustom(config.DefaultInstanceName)
+	cfg := config.GetSignServerConfig()
+	dynamo := db_services.NewDynamoDBService(cfg.ProfileTableName, SIGNER_KEY, PROFILE_ID_KEY)
+	return &ProfileRepository{Dynamo: dynamo}
 }
 
 func (s *ProfileRepository) CreateProfile(profile *domain.SignerProfile) error {
