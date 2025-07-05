@@ -6,34 +6,22 @@ import (
 )
 
 type ProfileService struct {
-	service *repositories.ProfileRepository
-}
-
-var profile_service *repositories.ProfileRepository = nil
-
-func SetProfileServiceMock(mock *repositories.ProfileRepository) {
-	profile_service = mock
-}
-
-func getProfileService() *repositories.ProfileRepository {
-	if profile_service == nil {
-		profile_service = repositories.NewProfileRepository()
-	}
-	return profile_service
+	repository *repositories.ProfileRepository
 }
 
 func NewProfileService() *ProfileService {
-	return &ProfileService{service: getProfileService()}
+	repository := repositories.NewProfileRepository()
+	return &ProfileService{repository: repository}
 }
 
 func (s *ProfileService) CreateProfile(profile *domain.SignerProfile) error {
-	return s.service.CreateProfile(profile)
+	return s.repository.CreateProfile(profile)
 }
 
 func (s *ProfileService) GetProfileByID(id string) (*domain.SignerProfile, error) {
-	return s.service.GetProfileByID(id)
+	return s.repository.GetProfileByID(id)
 }
 
 func (s *ProfileService) UpdateProfile(id string, profile *domain.SignerProfile) error {
-	return s.service.UpdateProfile(id, profile)
+	return s.repository.UpdateProfile(id, profile)
 }

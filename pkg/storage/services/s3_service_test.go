@@ -70,8 +70,7 @@ func TestGeneratePresignedGetURL_Error(t *testing.T) {
 
 func TestNewS3Service_Success(t *testing.T) {
 	// Testa inicialização sem erro (mockando config.LoadDefaultConfig)
-	svc, err := NewS3Service("bucket")
-	assert.NoError(t, err)
+	svc := NewS3Service("bucket")
 	assert.NotNil(t, svc)
 	assert.Equal(t, "bucket", svc.Bucket)
 }
