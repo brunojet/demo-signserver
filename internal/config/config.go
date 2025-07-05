@@ -26,18 +26,16 @@ func OsGetenvPanic(key string) string {
 	return value
 }
 
-func makeResourceName(projectName, environment, resource string) string {
-	return fmt.Sprintf("%s-%s-%s", projectName, environment, OsGetenvPanic(resource))
+func MakeResourceName(resource string) string {
+	return fmt.Sprintf("%s-%s-%s", OsGetenvPanic("PROJECT_NAME"), OsGetenvPanic("ENVIRONMENT"), OsGetenvPanic(resource))
 }
 
 func GetSignServerConfig() *SignServerConfig {
 	once.Do(func() {
-		profileName := OsGetenvPanic("PROJECT_NAME")
-		environment := OsGetenvPanic("ENVIRONMENT")
 		SignServerConfigInstance = &SignServerConfig{
-			RequestTableName:  makeResourceName(profileName, environment, "SIGN_REQUEST_TABLE"),
-			ProfileTableName:  makeResourceName(profileName, environment, "SIGN_PROFILE_TABLE"),
-			StorageBucketName: makeResourceName(profileName, environment, "SIGN_STORAGE_BUCKET"),
+			RequestTableName:  MakeResourceName("SIGN_REQUEST_TABLE"),
+			ProfileTableName:  MakeResourceName("SIGN_PROFILE_TABLE"),
+			StorageBucketName: MakeResourceName("SIGN_STORAGE_BUCKET"),
 		}
 	})
 	return SignServerConfigInstance

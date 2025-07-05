@@ -2,9 +2,9 @@ package http_handlers
 
 import (
 	"context"
+	"demo-signserver/internal/config"
 	"demo-signserver/internal/request/services"
 	db_services "demo-signserver/pkg/repository/services"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -29,11 +29,11 @@ func init() {
 
 func TestMain(m *testing.M) {
 	db := db_services.NewDB()
-	profile := fmt.Sprintf("%s-%s-%s", os.Getenv("PROJECT_NAME"), os.Getenv("ENVIRONMENT"), os.Getenv("SIGN_PROFILE_TABLE"))
+	profile := config.MakeResourceName("SIGN_PROFILE_TABLE")
 	db.DeleteTable(context.Background(), profile)
 	db.CreateTable(context.Background(), profile, db_services.SORT_KEY)
 
-	request := fmt.Sprintf("%s-%s-%s", os.Getenv("PROJECT_NAME"), os.Getenv("ENVIRONMENT"), os.Getenv("SIGN_REQUEST_TABLE"))
+	request := config.MakeResourceName("SIGN_REQUEST_TABLE")
 	db.DeleteTable(context.Background(), request)
 	db.CreateTable(context.Background(), request, db_services.NO_KEY)
 
