@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
@@ -14,19 +13,12 @@ type DBServices struct {
 	Client *dynamodb.Client
 }
 
-func NewDB(table string) *DBServices {
+func NewDB() *DBServices {
 	client := GetDynamoDBCLient()
 	return &DBServices{Client: client}
 }
 
-func buildTableName(table string) string {
-	project := os.Getenv("PROJECT_NAME")
-	env := os.Getenv("ENVIRONMENT")
-	return fmt.Sprintf("%s-%s-%s", project, env, table)
-}
-
-// TableExists retorna true se a tabela existe, false se não existe, ou erro se outro erro.
-func (db *DBServices) tableExists(ctx context.Context, table string) bool {
+func (db *DBServices) TableExists(ctx context.Context, table string) bool {
 	_, err := db.Client.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
 	if err == nil {
 		return true
@@ -38,16 +30,9 @@ func (db *DBServices) tableExists(ctx context.Context, table string) bool {
 	return false
 }
 
-func (db *DBServices) TableExists(ctx context.Context, table string) bool {
-	table = buildTableName(table)
-	return db.tableExists(ctx, table)
-}
-
 // DeleteTable remove a tabela se ela existir (útil para testes).
 func (db *DBServices) DeleteTable(ctx context.Context, table string) error {
-	table = buildTableName(table)
-
-	if !db.tableExists(ctx, table) {
+	if !db.TableExists(ctx, table) {
 		return nil
 	}
 
@@ -66,18 +51,16 @@ func (db *DBServices) DeleteTable(ctx context.Context, table string) error {
 
 // CreateTable cria uma tabela DynamoDB com pk obrigatória e sk opcional (sempre usando nomes físicos pk/sk).
 func (db *DBServices) CreateTable(ctx context.Context, table string, skKey string) error {
-	table = buildTableName(table)
-
-	if db.tableExists(ctx, table) {
+	if db.TableExists(ctx, table) {
 		return nil
 	}
 
-	pkPhysical := "pk"
+	pkPhysical := PARTITION_KEY
 	attrs := []types.AttributeDefinition{{AttributeName: &pkPhysical, AttributeType: types.ScalarAttributeTypeS}}
 	keySchema := []types.KeySchemaElement{{AttributeName: &pkPhysical, KeyType: types.KeyTypeHash}}
 
 	if skKey != "" {
-		skPhysical := "sk"
+		skPhysical := SORT_KEY
 		attrs = append(attrs, types.AttributeDefinition{AttributeName: &skPhysical, AttributeType: types.ScalarAttributeTypeS})
 		keySchema = append(keySchema, types.KeySchemaElement{AttributeName: &skPhysical, KeyType: types.KeyTypeRange})
 	}

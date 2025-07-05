@@ -2,59 +2,48 @@ package db_services
 
 import (
 	"context"
-	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testTableName = "TestTable-001"
-	db            *DBServices
+	table_test_db *DBServices
 )
 
 func init() {
-	os.Setenv("PROJECT_NAME", "signserver")
-	os.Setenv("ENVIRONMENT", "dev")
-	db = NewDB(testTableName)
+	table_test_db = NewDB()
 }
 
 func TestTableExists_Create_Delete(t *testing.T) {
-	table := testTableName
+	table := "TestTable-001"
 
-	_ = db.DeleteTable(context.Background(), table)
-	if db.TableExists(context.Background(), table) {
-		t.Fatalf("Tabela deveria não existir")
-	}
+	_ = table_test_db.DeleteTable(context.Background(), table)
+	tableExists := table_test_db.TableExists(context.Background(), table)
+	assert.False(t, tableExists, "Tabela deveria não existir antes de criar")
 
 	// Cria tabela
-	err := db.CreateTable(context.Background(), table, "sk")
-	if err != nil {
-		t.Fatalf("Erro ao criar tabela: %v", err)
-	}
-	if !db.TableExists(context.Background(), table) {
-		t.Fatalf("Tabela deveria existir após criação")
-	}
+	err := table_test_db.CreateTable(context.Background(), table, SORT_KEY)
+	assert.NoError(t, err, "Erro ao criar tabela")
+
+	tableExists = table_test_db.TableExists(context.Background(), table)
+	assert.True(t, tableExists, "Tabela deveria existir após criação")
 
 	// Cria de novo (idempotente)
-	err = db.CreateTable(context.Background(), table, "sk")
-	if err != nil {
-		t.Fatalf("CreateTable deveria ser idempotente: %v", err)
-	}
+	err = table_test_db.CreateTable(context.Background(), table, SORT_KEY)
+	assert.NoError(t, err, "CreateTable deveria ser idempotente")
 
 	// Deleta tabela
-	err = db.DeleteTable(context.Background(), table)
-	if err != nil {
-		t.Fatalf("Erro ao deletar tabela: %v", err)
-	}
-	if db.TableExists(context.Background(), table) {
-		t.Fatalf("Tabela deveria não existir")
-	}
+	err = table_test_db.DeleteTable(context.Background(), table)
+	assert.NoError(t, err, "Erro ao deletar tabela")
+
+	tableExists = table_test_db.TableExists(context.Background(), table)
+	assert.False(t, tableExists, "Tabela deveria não existir após deleção")
 
 	// Deleta de novo (idempotente)
-	err = db.DeleteTable(context.Background(), table)
-	if err != nil {
-		t.Fatalf("Erro ao deletar tabela: %v", err)
-	}
-	if db.TableExists(context.Background(), table) {
-		t.Fatalf("Tabela deveria não existir")
-	}
+	err = table_test_db.DeleteTable(context.Background(), table)
+	assert.NoError(t, err, "DeleteTable deveria ser idempotente")
+
+	tableExists = table_test_db.TableExists(context.Background(), table)
+	assert.False(t, tableExists, "Tabela deveria não existir após deleção")
 }
