@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sync"
 
+	"demo-signserver/pkg/observability"
 	"demo-signserver/pkg/workerpool"
 )
 
@@ -27,6 +28,7 @@ type eventWorker struct {
 type EventBus struct {
 	mu      sync.RWMutex
 	workers WorkerMap
+	Obs     *observability.MetricsService // Observabilidade opcional
 }
 
 func NewEventBus() *EventBus {
@@ -100,12 +102,37 @@ func (b *EventBus) Publish(eventType HandlerName, data any) error {
 	}
 	b.mu.RLock()
 	w, ok := b.getWorker(eventType)
+	obs := b.Obs
 	b.mu.RUnlock()
 	if !ok {
+		if obs != nil {
+			observability.LogInfo("eventbus.publish.error", map[string]interface{}{
+				"eventType": eventType,
+				"error":     "handler não registrado",
+			})
+			obs.Inc("eventbus_publish_error", map[string]string{"eventType": string(eventType)})
+		}
 		return fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
 	}
 	w.pool.Enqueue(func(ctx context.Context) {
+		defer func() {
+			if r := recover(); r != nil {
+				if obs != nil {
+					observability.LogInfo("eventbus.handler.panic", map[string]interface{}{
+						"eventType": eventType,
+						"panic":     r,
+					})
+					obs.Inc("eventbus_handler_panic", map[string]string{"eventType": string(eventType)})
+				}
+			}
+		}()
 		w.handler(ctx, data)
+		if obs != nil {
+			observability.LogInfo("eventbus.handler.success", map[string]interface{}{
+				"eventType": eventType,
+			})
+			obs.Inc("eventbus_handler_success", map[string]string{"eventType": string(eventType)})
+		}
 	})
 	return nil
 }
