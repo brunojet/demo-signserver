@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"sync"
 
 	"demo-signserver/pkg/observability"
@@ -54,20 +55,67 @@ func (b *EventBus) getWorker(eventType HandlerName) (*eventWorker, bool) {
 	return w, ok
 }
 
-func isValidHandlerName(eventType HandlerName) error {
-	if !handlerNameRegex.MatchString(string(eventType)) {
-		return fmt.Errorf("eventType inválido: deve começar com letra minúscula, conter apenas letras minúsculas, números ou sublinhado, e ter até 100 caracteres")
+// getOrErrorWorker retorna o worker se existir, erro se não existir ou nome inválido
+func (b *EventBus) getOrErrorWorker(event string, eventType HandlerName) (*eventWorker, error) {
+	if err := b.isValidHandlerName(event, eventType); err != nil {
+		return nil, err
+	}
+	w, ok := b.getWorker(eventType)
+	if !ok {
+		err := fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
+		b.obsLogInc(event, map[string]interface{}{
+			"eventType": eventType,
+			"error":     err.Error(),
+		}, event, map[string]string{"eventType": string(eventType)})
+		return nil, err
+	}
+	return w, nil
+}
+
+// getIfExistsWorker retorna erro se o worker já existir (para evitar duplo registro)
+func (b *EventBus) getIfExistsWorker(event string, eventType HandlerName) error {
+	if err := b.isValidHandlerName(event, eventType); err != nil {
+		return err
+	}
+	_, ok := b.getWorker(eventType)
+	if ok {
+		err := fmt.Errorf("handler já registrado para o tipo de evento: %s", eventType)
+		b.obsLogInc(event, map[string]interface{}{
+			"eventType": eventType,
+			"error":     err.Error(),
+		}, event, map[string]string{"eventType": string(eventType)})
+		return err
 	}
 	return nil
 }
 
-func isValidWorkerParams(handler Handler, numWorkers int, queueBacklog int) error {
+func (b *EventBus) isValidHandlerName(event string, eventType HandlerName) error {
+	if !handlerNameRegex.MatchString(string(eventType)) {
+		err := fmt.Errorf("eventType inválido: deve começar com letra minúscula, conter apenas letras minúsculas, números ou sublinhado, e ter até 100 caracteres")
+		b.obsLogInc(event, map[string]interface{}{
+			"eventType": eventType,
+			"error":     err.Error(),
+		}, event, map[string]string{"eventType": string(eventType)})
+		return err
+	}
+	return nil
+}
+
+func (b *EventBus) isValidWorkerParams(event string, handler Handler, numWorkers int, queueBacklog int) error {
 	if handler == nil {
-		return fmt.Errorf("handler não pode ser nil")
+		err := fmt.Errorf("handler não pode ser nil")
+		b.obsLogInc(event, map[string]interface{}{
+			"error": err.Error(),
+		}, "eventbus_register_error", map[string]string{"handler": "nil"})
+		return err
 	}
 
 	if numWorkers <= 0 || queueBacklog < numWorkers {
-		return fmt.Errorf("parâmetros inválidos: numWorkers deve ser > 0 e queueBacklog >= numWorkers")
+		err := fmt.Errorf("numWorkers deve ser > 0 e queueBacklog >= numWorkers")
+		b.obsLogInc(event, map[string]interface{}{
+			"error": err.Error(),
+		}, event, map[string]string{"numWorkers": strconv.Itoa(numWorkers), "queueBacklog": strconv.Itoa(queueBacklog)})
+		return err
 	}
 
 	return nil
@@ -81,29 +129,15 @@ func (b *EventBus) obsLogInc(event string, fields map[string]interface{}, metric
 }
 
 func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers int, queueBacklog int) error {
-	if err := isValidHandlerName(eventType); err != nil {
-		b.obsLogInc("eventbus.register.error", map[string]interface{}{
-			"eventType": eventType,
-			"error":     err.Error(),
-		}, "eventbus_register_error", map[string]string{"eventType": string(eventType)})
-		return err
-	}
-	if err := isValidWorkerParams(handler, numWorkers, queueBacklog); err != nil {
-		b.obsLogInc("eventbus.register.error", map[string]interface{}{
-			"eventType": eventType,
-			"error":     err.Error(),
-		}, "eventbus_register_error", map[string]string{"eventType": string(eventType)})
-		return err
-	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if _, ok := b.getWorker(eventType); ok {
-		b.obsLogInc("eventbus.register.error", map[string]interface{}{
-			"eventType": eventType,
-			"error":     "handler já registrado",
-		}, "eventbus_register_error", map[string]string{"eventType": string(eventType)})
-		return fmt.Errorf("handler já registrado para o tipo de evento: %s", eventType)
+	if err := b.isValidWorkerParams("eventbus.register.error", handler, numWorkers, queueBacklog); err != nil {
+		return err
 	}
+	if err := b.getIfExistsWorker("eventbus.register.error", eventType); err != nil {
+		return err
+	}
+
 	pool := workerpool.New(numWorkers, queueBacklog)
 	pool.Start()
 	b.workers[eventType] = &eventWorker{pool: pool, handler: handler}
@@ -117,22 +151,11 @@ func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers i
 
 // Unregister remove o handler e para os workers do tipo de evento.
 func (b *EventBus) Unregister(eventType HandlerName) error {
-	if err := isValidHandlerName(eventType); err != nil {
-		b.obsLogInc("eventbus.unregister.error", map[string]interface{}{
-			"eventType": eventType,
-			"error":     err.Error(),
-		}, "eventbus_unregister_error", map[string]string{"eventType": string(eventType)})
-		return err
-	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	w, ok := b.getWorker(eventType)
-	if !ok {
-		b.obsLogInc("eventbus.unregister.error", map[string]interface{}{
-			"eventType": eventType,
-			"error":     "handler não registrado",
-		}, "eventbus_unregister_error", map[string]string{"eventType": string(eventType)})
-		return fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
+	w, err := b.getOrErrorWorker("eventbus.unregister.error", eventType)
+	if err != nil {
+		return err
 	}
 	w.pool.Stop()
 	delete(b.workers, eventType)
@@ -145,25 +168,14 @@ func (b *EventBus) Unregister(eventType HandlerName) error {
 // Publish envia o evento para o pool de workers do tipo, se existir.
 // Permite passar um contexto externo para cancelamento/timeout do handler.
 func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName, data any) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	b.obsLogInc("eventbus.publish.called", map[string]interface{}{
 		"eventType": eventType,
 	}, "eventbus_publish_called", map[string]string{"eventType": string(eventType)})
-	if err := isValidHandlerName(eventType); err != nil {
-		b.obsLogInc("eventbus.publish.error", map[string]interface{}{
-			"eventType": eventType,
-			"error":     err.Error(),
-		}, "eventbus_publish_error", map[string]string{"eventType": string(eventType)})
+	w, err := b.getOrErrorWorker("eventbus.publish.error", eventType)
+	if err != nil {
 		return err
-	}
-	b.mu.RLock()
-	w, ok := b.getWorker(eventType)
-	b.mu.RUnlock()
-	if !ok {
-		b.obsLogInc("eventbus.publish.error", map[string]interface{}{
-			"eventType": eventType,
-			"error":     "handler não registrado",
-		}, "eventbus_publish_error", map[string]string{"eventType": string(eventType)})
-		return fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
 	}
 	w.pool.Enqueue(func(poolCtx context.Context) {
 		// Usa o contexto externo se não for context.TODO(), senão o do pool

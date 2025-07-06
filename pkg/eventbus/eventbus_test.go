@@ -121,3 +121,90 @@ func TestUnregisterAndStop(t *testing.T) {
 	bus.Stop()
 	// Não deve dar panic nem deadlock
 }
+
+func TestUnregisterNotFound(t *testing.T) {
+	bus := NewEventBus()
+	err := bus.Unregister("naoexiste")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "handler não registrado")
+}
+
+func TestUnregisterInvalidHandlerName(t *testing.T) {
+	bus := NewEventBus()
+	err := bus.Unregister("INVALID-NAME")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "eventType inválido")
+}
+
+func TestIsValidHandlerName(t *testing.T) {
+	bus := NewEventBus()
+	cases := []struct {
+		name      string
+		eventType HandlerName
+		expectErr bool
+	}{
+		{"válido simples", "abc", false},
+		{"válido com número", "abc1", false},
+		{"válido com underline", "abc_1", false},
+		{"inválido maiúscula", "Abc", true},
+		{"inválido hífen", "abc-def", true},
+		{"inválido vazio", "", true},
+		{"inválido longo", HandlerName(string(make([]byte, 101))), true},
+	}
+	for _, tc := range cases {
+		err := bus.isValidHandlerName("test", tc.eventType)
+		if tc.expectErr {
+			assert.Error(t, err, tc.name)
+		} else {
+			assert.NoError(t, err, tc.name)
+		}
+	}
+}
+
+func TestIsValidWorkerParams(t *testing.T) {
+	bus := NewEventBus()
+	validHandler := func(ctx context.Context, event any) {}
+	cases := []struct {
+		name         string
+		handler      Handler
+		numWorkers   int
+		queueBacklog int
+		expectErr    bool
+	}{
+		{"válido", validHandler, 1, 1, false},
+		{"handler nil", nil, 1, 1, true},
+		{"numWorkers zero", validHandler, 0, 1, true},
+		{"queueBacklog < numWorkers", validHandler, 2, 1, true},
+	}
+	for _, tc := range cases {
+		err := bus.isValidWorkerParams("test", tc.handler, tc.numWorkers, tc.queueBacklog)
+		if tc.expectErr {
+			assert.Error(t, err, tc.name)
+		} else {
+			assert.NoError(t, err, tc.name)
+		}
+	}
+}
+
+func TestRegisterInvalidHandlerName(t *testing.T) {
+	bus := NewEventBus()
+	err := bus.Register("INVALID-NAME", func(ctx context.Context, event any) {}, 1, 2)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "eventType inválido")
+}
+
+func TestRegisterAlreadyExists(t *testing.T) {
+	bus := NewEventBus()
+	err := bus.Register("duplo", func(ctx context.Context, event any) {}, 1, 2)
+	assert.NoError(t, err)
+	err = bus.Register("duplo", func(ctx context.Context, event any) {}, 1, 2)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "handler já registrado")
+}
+
+func TestPublishWithContextInvalidHandlerName(t *testing.T) {
+	bus := NewEventBus()
+	err := bus.PublishWithContext(context.Background(), "INVALID-NAME", nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "eventType inválido")
+}
