@@ -1,6 +1,8 @@
 package config
 
 import (
+	"context"
+	db_services "demo-signserver/pkg/repository/services"
 	"fmt"
 	"log"
 	"os"
@@ -39,4 +41,14 @@ func GetSignServerConfig() *SignServerConfig {
 		}
 	})
 	return SignServerConfigInstance
+}
+
+func SetupLocalEnvironment() {
+	if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
+		db := db_services.NewDB()
+		config := GetSignServerConfig()
+		db.CreateTable(context.Background(), config.ProfileTableName, db_services.SORT_KEY)
+		db.CreateTable(context.Background(), config.RequestTableName, db_services.NO_KEY)
+		fmt.Println("Local environment setup completed.")
+	}
 }

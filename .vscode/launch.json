@@ -1,21 +1,6 @@
 {
   "version": "0.2.0",
   "configurations": [
-
-    {
-      "name": "Go: Testes com DynamoDB Local",
-      "type": "go",
-      "request": "launch",
-      "mode": "test",
-      "program": "${workspaceFolder}",
-      "env": {
-        "PROJECT_NAME": "signserver",
-        "ENVIRONMENT": "dev",
-        "SIGN_PROFILE_TABLE": "profile",
-        "SIGN_REQUEST_TABLE": "request",
-        "DYNAMODB_ENDPOINT": "http://localhost:8001"
-      }
-    },
     {
       "name": "Debug Go Server",
       "type": "go",
@@ -24,7 +9,7 @@
       "program": "${workspaceFolder}/cmd/main.go",
       "env": {
         "PROJECT_NAME": "signserver",
-        "ENVIRONMENT": "dev",
+        "ENVIRONMENT": "local",
         "SIGN_PROFILE_TABLE": "profile",
         "SIGN_REQUEST_TABLE": "request",
         "SIGN_STORAGE_BUCKET": "storage",
