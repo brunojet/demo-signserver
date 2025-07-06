@@ -37,6 +37,18 @@ func NewEventBus() *EventBus {
 	}
 }
 
+// NewEventBus permite injetar um MetricsSink customizado para métricas e logs.
+func NewEventBusWithSink(sink observability.MetricsSink) *EventBus {
+	var obs *observability.MetricsService
+	if sink != nil {
+		obs = observability.NewMetricsService(sink)
+	}
+	return &EventBus{
+		workers: make(WorkerMap),
+		Obs:     obs,
+	}
+}
+
 func (b *EventBus) getWorker(eventType HandlerName) (*eventWorker, bool) {
 	w, ok := b.workers[eventType]
 	return w, ok
