@@ -96,7 +96,8 @@ func (b *EventBus) Unregister(eventType HandlerName) error {
 }
 
 // Publish envia o evento para o pool de workers do tipo, se existir.
-func (b *EventBus) Publish(eventType HandlerName, data any) error {
+// Permite passar um contexto externo para cancelamento/timeout do handler.
+func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName, data any) error {
 	if err := inValidHandlerName(eventType); err != nil {
 		return err
 	}
@@ -114,7 +115,12 @@ func (b *EventBus) Publish(eventType HandlerName, data any) error {
 		}
 		return fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
 	}
-	w.pool.Enqueue(func(ctx context.Context) {
+	w.pool.Enqueue(func(poolCtx context.Context) {
+		// Usa o contexto externo se não for context.TODO(), senão o do pool
+		realCtx := ctx
+		if ctx == context.TODO() {
+			realCtx = poolCtx
+		}
 		defer func() {
 			if r := recover(); r != nil {
 				if obs != nil {
@@ -126,7 +132,7 @@ func (b *EventBus) Publish(eventType HandlerName, data any) error {
 				}
 			}
 		}()
-		w.handler(ctx, data)
+		w.handler(realCtx, data)
 		if obs != nil {
 			observability.LogInfo("eventbus.handler.success", map[string]interface{}{
 				"eventType": eventType,
@@ -135,6 +141,11 @@ func (b *EventBus) Publish(eventType HandlerName, data any) error {
 		}
 	})
 	return nil
+}
+
+// Publish mantém compatibilidade, usando contexto nil (sem cancelamento externo)
+func (b *EventBus) Publish(eventType HandlerName, data any) error {
+	return b.PublishWithContext(context.TODO(), eventType, data)
 }
 
 // Stop encerra todos os workers de todos os tipos de evento e limpa o map.
