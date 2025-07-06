@@ -19,7 +19,7 @@ func NewProfileHandler(service *services.ProfileService) *ProfileHandler {
 }
 
 func (h *ProfileHandler) CreateProfile(c *gin.Context) {
-	var dto dtos.CreateSignerProfileDTO
+	var dto dtos.CreateProfileDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -46,7 +46,7 @@ func (h *ProfileHandler) GetProfileByID(c *gin.Context) {
 
 func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 	id := c.Param("id")
-	var dto dtos.UpdateSignerProfileDTO
+	var dto dtos.UpdateProfileDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

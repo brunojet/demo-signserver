@@ -4,33 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
+	"log"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/google/uuid"
 )
 
-type DBServices struct {
+type TableServices struct {
 	Client *dynamodb.Client
 }
 
-func NewDB(table string) *DBServices {
-	client, err := NewDynamoDBClient(context.Background(), buildTableName(table))
-	if err != nil {
-		panic(fmt.Sprintf("failed to create DynamoDB client: %v", err))
-	}
-
-	return &DBServices{Client: client}
+func NewDB() *TableServices {
+	client := GetDynamoDBCLient()
+	return &TableServices{Client: client}
 }
 
-func buildTableName(table string) string {
-	project := os.Getenv("PROJECT_NAME")
-	env := os.Getenv("ENVIRONMENT")
-	return fmt.Sprintf("%s-%s-%s", project, env, table)
-}
-
-// TableExists retorna true se a tabela existe, false se não existe, ou erro se outro erro.
-func (db *DBServices) tableExists(ctx context.Context, table string) bool {
+func (db *TableServices) TableExists(ctx context.Context, table string) bool {
 	_, err := db.Client.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
 	if err == nil {
 		return true
@@ -42,16 +32,9 @@ func (db *DBServices) tableExists(ctx context.Context, table string) bool {
 	return false
 }
 
-func (db *DBServices) TableExists(ctx context.Context, table string) bool {
-	table = buildTableName(table)
-	return db.tableExists(ctx, table)
-}
-
 // DeleteTable remove a tabela se ela existir (útil para testes).
-func (db *DBServices) DeleteTable(ctx context.Context, table string) error {
-	table = buildTableName(table)
-
-	if !db.tableExists(ctx, table) {
+func (db *TableServices) DeleteTable(ctx context.Context, table string) error {
+	if !db.TableExists(ctx, table) {
 		return nil
 	}
 
@@ -69,19 +52,17 @@ func (db *DBServices) DeleteTable(ctx context.Context, table string) error {
 }
 
 // CreateTable cria uma tabela DynamoDB com pk obrigatória e sk opcional (sempre usando nomes físicos pk/sk).
-func (db *DBServices) CreateTable(ctx context.Context, table string, skKey string) error {
-	table = buildTableName(table)
-
-	if db.tableExists(ctx, table) {
+func (db *TableServices) CreateTable(ctx context.Context, table string, skKey string) error {
+	if db.TableExists(ctx, table) {
 		return nil
 	}
 
-	pkPhysical := "pk"
+	pkPhysical := PARTITION_KEY
 	attrs := []types.AttributeDefinition{{AttributeName: &pkPhysical, AttributeType: types.ScalarAttributeTypeS}}
 	keySchema := []types.KeySchemaElement{{AttributeName: &pkPhysical, KeyType: types.KeyTypeHash}}
 
 	if skKey != "" {
-		skPhysical := "sk"
+		skPhysical := SORT_KEY
 		attrs = append(attrs, types.AttributeDefinition{AttributeName: &skPhysical, AttributeType: types.ScalarAttributeTypeS})
 		keySchema = append(keySchema, types.KeySchemaElement{AttributeName: &skPhysical, KeyType: types.KeyTypeRange})
 	}
@@ -98,4 +79,15 @@ func (db *DBServices) CreateTable(ctx context.Context, table string, skKey strin
 	}
 	fmt.Printf("[DynamoDBService] Tabela %s criada com sucesso (pk/sk).\n", table)
 	return nil
+}
+
+func (db *TableServices) CreateRandomTable(ctx context.Context, skKey string) string {
+	tableName := uuid.New().String()
+	err := db.CreateTable(ctx, tableName, skKey)
+	if err != nil {
+		log.Fatalf("erro ao criar tabela aleatória %s: %v", tableName, err)
+		return ""
+	}
+	fmt.Printf("[DynamoDBService] Tabela aleatória %s criada com sucesso.\n", tableName)
+	return tableName
 }

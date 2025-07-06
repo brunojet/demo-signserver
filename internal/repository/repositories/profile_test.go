@@ -1,34 +1,14 @@
 package repositories
 
 import (
-	"context"
 	"demo-signserver/internal/repository/domain"
-	db_services "demo-signserver/pkg/repository/services"
-	"log"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func init() {
-	os.Setenv("PROJECT_NAME", "signserver")
-	os.Setenv("ENVIRONMENT", "dev")
-	os.Setenv("SIGN_PROFILE_TABLE", "profile")
-	os.Setenv("DYNAMODB_ENDPOINT", "http://localhost:8001")
-	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
-	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
-	db := db_services.NewDB("Dummy")
-	if err := db.DeleteTable(context.Background(), "profile"); err != nil {
-		log.Fatalf("Error deleting table request: %v", err)
-	}
-	if err := db.CreateTable(context.Background(), "profile", "profile_id"); err != nil {
-		log.Fatalf("Error creating table request: %v", err)
-	}
-}
-
 func TestSignProfileService_CRUD(t *testing.T) {
-	service := NewSignProfileService()
+	service := NewProfileRepository()
 
 	desc := "Dispositivos Postivo perfil 001"
 	profileId := "015"

@@ -20,14 +20,14 @@ func (d *CreateSignRequestDTO) GetDomainCreateSignRequest() *domain.SignRequest 
 		WebhookURL:      d.WebhookURL,
 	}
 
-	domainReq.SetSignerStatus(domain.SignerStepCreated, nil)
+	domainReq.SetSignerStatus(domain.SignerStatusCreated, nil)
 	return &domainReq
 
 }
 
 type GetResponseDTO struct {
 	ID           string              `json:"id" binding:"required"`
-	SignerStatus domain.SignerStep   `json:"status,omitempty" binding:"required"`
+	SignerStatus domain.SignerStatus `json:"status,omitempty" binding:"required"`
 	SignerError  *domain.SignerError `json:"error,omitempty"`
 	DownloadURL  string              `json:"pre_signed_url" binding:"required,url"`
 }

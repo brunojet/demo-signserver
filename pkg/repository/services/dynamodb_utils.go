@@ -14,6 +14,7 @@ const (
 	PARTITION_KEY  = "pk"
 	SORT_KEY       = "sk"
 	ID_KEY         = "id"
+	NO_KEY         = ""
 	CREATED_AT_KEY = "created_at"
 	UPDATED_AT_KEY = "updated_at"
 )

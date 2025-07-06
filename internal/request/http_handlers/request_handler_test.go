@@ -2,56 +2,16 @@ package http_handlers
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"demo-signserver/internal/request/dtos"
-	"demo-signserver/internal/request/services"
 	db_services "demo-signserver/pkg/repository/services"
 
-	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
-
-var r *gin.Engine
-
-var (
-	ProfileTable_2 = "profile_handler_2"
-	RequestTable_2 = "request_handler_2"
-)
-
-func init() {
-	gin.SetMode(gin.TestMode)
-	r = gin.Default()
-	os.Setenv("DYNAMODB_ENDPOINT", "http://localhost:8001")
-	os.Setenv("AWS_ACCESS_KEY_ID", "fake")
-	os.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
-	os.Setenv("SIGN_PROFILE_TABLE", ProfileTable_2)
-	os.Setenv("SIGN_REQUEST_TABLE", RequestTable_2)
-	db := db_services.NewDB("Dummy")
-	if err := db.DeleteTable(context.Background(), ProfileTable_2); err != nil {
-		log.Fatalf("Error deleting table profile: %v", err)
-	}
-	if err := db.DeleteTable(context.Background(), RequestTable_2); err != nil {
-		log.Fatalf("Error deleting table request: %v", err)
-	}
-	if err := db.CreateTable(context.Background(), ProfileTable_2, "profile_id"); err != nil {
-		log.Fatalf("Error creating table profile: %v", err)
-	}
-	if err := db.CreateTable(context.Background(), RequestTable_2, ""); err != nil {
-		log.Fatalf("Error creating table request: %v", err)
-	}
-	handler := NewRequestHandler(services.NewRequestService())
-	handler.RegisterRoutes(r)
-	handler_profile := NewProfileHandler(services.NewProfileService())
-	handler_profile.RegisterRoutes(r)
-	log.Println("RequestHandler initialized")
-}
 
 func TestRequestHandler_CreateRequest_BadRequest(t *testing.T) {
 	w := httptest.NewRecorder()

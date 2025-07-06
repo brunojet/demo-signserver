@@ -17,8 +17,8 @@ func TestCreateSignRequestDTO_GetDomainCreateSignRequest(t *testing.T) {
 	if domainObj.SignerProfileId == nil || *domainObj.SignerProfileId != dto.ProfileId {
 		t.Errorf("Expected SignerProfileId %s, got %v", dto.ProfileId, domainObj.SignerProfileId)
 	}
-	if domainObj.SignerStatus == nil || *domainObj.SignerStatus != domain.SignerStepCreated {
-		t.Errorf("Expected SignerStatus %s, got %v", domain.SignerStepCreated, domainObj.SignerStatus)
+	if domainObj.SignerStatus == nil || *domainObj.SignerStatus != domain.SignerStatusCreated {
+		t.Errorf("Expected SignerStatus %s, got %v", domain.SignerStatusCreated, domainObj.SignerStatus)
 	}
 	if domainObj.WebhookURL == nil || *domainObj.WebhookURL != webhook {
 		t.Errorf("Expected WebhookURL %s, got %v", webhook, domainObj.WebhookURL)
@@ -27,8 +27,8 @@ func TestCreateSignRequestDTO_GetDomainCreateSignRequest(t *testing.T) {
 		t.Errorf("Expected History with 1 entry, got %v", domainObj.History)
 	} else {
 		entry := (*domainObj.History)[0]
-		if entry.SignerStep == nil || *entry.SignerStep != domain.SignerStepCreated {
-			t.Errorf("Expected first history step to be %s, got %v", domain.SignerStepCreated, entry.SignerStep)
+		if entry.SignerStatus == nil || *entry.SignerStatus != domain.SignerStatusCreated {
+			t.Errorf("Expected first history step to be %s, got %v", domain.SignerStatusCreated, entry.SignerStatus)
 		}
 		if entry.Error != nil {
 			t.Errorf("Expected first history error to be nil, got %v", entry.Error)

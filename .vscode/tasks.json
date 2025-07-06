@@ -5,7 +5,15 @@
 			"type": "shell",
 			"label": "Go Test Coverage HTML",
 			"command": "go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html",
-			"group": "test"
+			"options": {
+				"env": {
+					"DYNAMODB_ENDPOINT": "http://localhost:8001"
+				}
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
 		}
 	]
 }

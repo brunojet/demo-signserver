@@ -8,7 +8,7 @@ type TransferInfoDTO struct {
 	Interval int    `json:"interval" binding:"required,min=5,max=30"`
 }
 
-type CreateSignerProfileDTO struct {
+type CreateProfileDTO struct {
 	Signer      domain.Signer           `json:"signer" binding:"required,oneof=positivo gertec"`
 	ProfileId   string                  `json:"profile_id" binding:"required,len=3,numeric"`
 	Description string                  `json:"description" binding:"required,min=3,max=255"`
@@ -17,7 +17,7 @@ type CreateSignerProfileDTO struct {
 	Download    TransferInfoDTO         `json:"download" binding:"required"`
 }
 
-type UpdateSignerProfileDTO struct {
+type UpdateProfileDTO struct {
 	Description *string                 `json:"description,omitempty" binding:"min=3,max=255"`
 	Configs     *[]domain.ProfileConfig `json:"configs,omitempty"`
 	Upload      *TransferInfoDTO        `json:"upload,omitempty"`
@@ -26,7 +26,7 @@ type UpdateSignerProfileDTO struct {
 
 type GetSignerProfileDTO = domain.SignerProfile
 
-func (d *CreateSignerProfileDTO) GetDomainCreateSignerProfile() *domain.SignerProfile {
+func (d *CreateProfileDTO) GetDomainCreateSignerProfile() *domain.SignerProfile {
 	return &domain.SignerProfile{
 		Signer:      &d.Signer,
 		ProfileId:   &d.ProfileId,
@@ -37,7 +37,7 @@ func (d *CreateSignerProfileDTO) GetDomainCreateSignerProfile() *domain.SignerPr
 	}
 }
 
-func (d *UpdateSignerProfileDTO) GetDomainUpdateSignerProfile() *domain.SignerProfile {
+func (d *UpdateProfileDTO) GetDomainUpdateSignerProfile() *domain.SignerProfile {
 	return &domain.SignerProfile{
 		Description: d.Description,
 		Configs:     d.Configs,
