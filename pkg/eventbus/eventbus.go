@@ -73,58 +73,96 @@ func isValidWorkerParams(handler Handler, numWorkers int, queueBacklog int) erro
 	return nil
 }
 
+func (b *EventBus) obsLogInc(event string, fields map[string]interface{}, metric string, tags map[string]string) {
+	if b.Obs != nil {
+		observability.LogInfo(event, fields)
+		b.Obs.Inc(metric, tags)
+	}
+}
+
 func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers int, queueBacklog int) error {
 	if err := isValidHandlerName(eventType); err != nil {
+		b.obsLogInc("eventbus.register.error", map[string]interface{}{
+			"eventType": eventType,
+			"error":     err.Error(),
+		}, "eventbus_register_error", map[string]string{"eventType": string(eventType)})
 		return err
 	}
 	if err := isValidWorkerParams(handler, numWorkers, queueBacklog); err != nil {
+		b.obsLogInc("eventbus.register.error", map[string]interface{}{
+			"eventType": eventType,
+			"error":     err.Error(),
+		}, "eventbus_register_error", map[string]string{"eventType": string(eventType)})
 		return err
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if _, ok := b.getWorker(eventType); ok {
+		b.obsLogInc("eventbus.register.error", map[string]interface{}{
+			"eventType": eventType,
+			"error":     "handler já registrado",
+		}, "eventbus_register_error", map[string]string{"eventType": string(eventType)})
 		return fmt.Errorf("handler já registrado para o tipo de evento: %s", eventType)
 	}
 	pool := workerpool.New(numWorkers, queueBacklog)
 	pool.Start()
 	b.workers[eventType] = &eventWorker{pool: pool, handler: handler}
+	b.obsLogInc("eventbus.register.success", map[string]interface{}{
+		"eventType":    eventType,
+		"numWorkers":   numWorkers,
+		"queueBacklog": queueBacklog,
+	}, "eventbus_register_success", map[string]string{"eventType": string(eventType)})
 	return nil
 }
 
 // Unregister remove o handler e para os workers do tipo de evento.
 func (b *EventBus) Unregister(eventType HandlerName) error {
 	if err := isValidHandlerName(eventType); err != nil {
+		b.obsLogInc("eventbus.unregister.error", map[string]interface{}{
+			"eventType": eventType,
+			"error":     err.Error(),
+		}, "eventbus_unregister_error", map[string]string{"eventType": string(eventType)})
 		return err
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	w, ok := b.getWorker(eventType)
 	if !ok {
+		b.obsLogInc("eventbus.unregister.error", map[string]interface{}{
+			"eventType": eventType,
+			"error":     "handler não registrado",
+		}, "eventbus_unregister_error", map[string]string{"eventType": string(eventType)})
 		return fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
 	}
 	w.pool.Stop()
 	delete(b.workers, eventType)
+	b.obsLogInc("eventbus.unregister.success", map[string]interface{}{
+		"eventType": eventType,
+	}, "eventbus_unregister_success", map[string]string{"eventType": string(eventType)})
 	return nil
 }
 
 // Publish envia o evento para o pool de workers do tipo, se existir.
 // Permite passar um contexto externo para cancelamento/timeout do handler.
 func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName, data any) error {
+	b.obsLogInc("eventbus.publish.called", map[string]interface{}{
+		"eventType": eventType,
+	}, "eventbus_publish_called", map[string]string{"eventType": string(eventType)})
 	if err := isValidHandlerName(eventType); err != nil {
+		b.obsLogInc("eventbus.publish.error", map[string]interface{}{
+			"eventType": eventType,
+			"error":     err.Error(),
+		}, "eventbus_publish_error", map[string]string{"eventType": string(eventType)})
 		return err
 	}
 	b.mu.RLock()
 	w, ok := b.getWorker(eventType)
-	obs := b.Obs
 	b.mu.RUnlock()
 	if !ok {
-		if obs != nil {
-			observability.LogInfo("eventbus.publish.error", map[string]interface{}{
-				"eventType": eventType,
-				"error":     "handler não registrado",
-			})
-			obs.Inc("eventbus_publish_error", map[string]string{"eventType": string(eventType)})
-		}
+		b.obsLogInc("eventbus.publish.error", map[string]interface{}{
+			"eventType": eventType,
+			"error":     "handler não registrado",
+		}, "eventbus_publish_error", map[string]string{"eventType": string(eventType)})
 		return fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
 	}
 	w.pool.Enqueue(func(poolCtx context.Context) {
@@ -135,22 +173,16 @@ func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName
 		}
 		defer func() {
 			if r := recover(); r != nil {
-				if obs != nil {
-					observability.LogInfo("eventbus.handler.panic", map[string]interface{}{
-						"eventType": eventType,
-						"panic":     r,
-					})
-					obs.Inc("eventbus_handler_panic", map[string]string{"eventType": string(eventType)})
-				}
+				b.obsLogInc("eventbus.handler.panic", map[string]interface{}{
+					"eventType": eventType,
+					"panic":     r,
+				}, "eventbus_handler_panic", map[string]string{"eventType": string(eventType)})
 			}
 		}()
 		w.handler(realCtx, data)
-		if obs != nil {
-			observability.LogInfo("eventbus.handler.success", map[string]interface{}{
-				"eventType": eventType,
-			})
-			obs.Inc("eventbus_handler_success", map[string]string{"eventType": string(eventType)})
-		}
+		b.obsLogInc("eventbus.handler.success", map[string]interface{}{
+			"eventType": eventType,
+		}, "eventbus_handler_success", map[string]string{"eventType": string(eventType)})
 	})
 	return nil
 }
