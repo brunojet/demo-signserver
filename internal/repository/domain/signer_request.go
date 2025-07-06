@@ -77,13 +77,21 @@ type SignGetResponse struct {
 	DownloadURL  *string      `json:"download_url,omitempty" binding:"required,url"`
 }
 
-func (s *SignRequest) SetUnsingedBucketInfo(bucketName, objectKey string) {
+func (s *SignRequest) SetUnsignedBucketInfo(bucketName, objectKey string) {
 	s.UnsignedFile = &BucketInfo{
 		BucketName: bucketName,
 		ObjectKey:  objectKey,
 		Size:       0,
 		SHA256:     "",
 	}
+}
+
+func (s *SignRequest) SetUnsignedBucketInfoShaAndSize(sha256 string, size int64) {
+	if s.UnsignedFile == nil {
+		return
+	}
+	s.UnsignedFile.SHA256 = sha256
+	s.UnsignedFile.Size = size
 }
 
 func (s *SignRequest) SetSignerStatus(step SignerStatus, err *SignerError) {

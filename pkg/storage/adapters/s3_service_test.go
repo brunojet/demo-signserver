@@ -1,4 +1,4 @@
-package storage_services
+package adapters
 
 import (
 	"context"
@@ -72,7 +72,9 @@ func TestNewS3Service_Success(t *testing.T) {
 	// Testa inicialização sem erro (mockando config.LoadDefaultConfig)
 	svc := NewS3Service("bucket")
 	assert.NotNil(t, svc)
-	assert.Equal(t, "bucket", svc.Bucket)
+	s3svc, ok := svc.(*S3Service)
+	assert.True(t, ok)
+	assert.Equal(t, "bucket", s3svc.Bucket)
 }
 
 func TestNewS3Service_Error(t *testing.T) {

@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	db_services "demo-signserver/pkg/repository/services"
+	storage_adapters "demo-signserver/pkg/storage/adapters"
 	"fmt"
 	"log"
 	"os"
@@ -10,9 +11,16 @@ import (
 )
 
 var (
-	SignServerConfigInstance *SignServerConfig
-	once                     sync.Once
+	SignServerConfigInstance  *SignServerConfig
+	SignServerMethodsInstance *SignServerMethods
+	onceConfig                sync.Once
+	onceMethods               sync.Once
 )
+
+type SignServerMethods struct {
+	NewStorageService  func(bucketName string) storage_adapters.StorageServiceInterface
+	NewDynamoDBService func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService
+}
 
 type SignServerConfig struct {
 	RequestTableName  string
@@ -33,22 +41,40 @@ func MakeResourceName(resource string) string {
 }
 
 func GetSignServerConfig() *SignServerConfig {
-	once.Do(func() {
+	onceConfig.Do(func() {
+		requestTable := MakeResourceName("SIGN_REQUEST_TABLE")
+		profileTable := MakeResourceName("SIGN_PROFILE_TABLE")
+		storageBucket := MakeResourceName("SIGN_STORAGE_BUCKET")
+
 		SignServerConfigInstance = &SignServerConfig{
-			RequestTableName:  MakeResourceName("SIGN_REQUEST_TABLE"),
-			ProfileTableName:  MakeResourceName("SIGN_PROFILE_TABLE"),
-			StorageBucketName: MakeResourceName("SIGN_STORAGE_BUCKET"),
+			ProfileTableName:  profileTable,
+			RequestTableName:  requestTable,
+			StorageBucketName: storageBucket,
+		}
+
+		if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
+			db := db_services.NewDB()
+			db.CreateTable(context.Background(), profileTable, db_services.SORT_KEY)
+			db.CreateTable(context.Background(), requestTable, db_services.NO_KEY)
 		}
 	})
 	return SignServerConfigInstance
 }
 
-func SetupLocalEnvironment() {
-	if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
-		db := db_services.NewDB()
-		config := GetSignServerConfig()
-		db.CreateTable(context.Background(), config.ProfileTableName, db_services.SORT_KEY)
-		db.CreateTable(context.Background(), config.RequestTableName, db_services.NO_KEY)
-		fmt.Println("Local environment setup completed.")
-	}
+func GetSignServerMethods() *SignServerMethods {
+	onceMethods.Do(func() {
+		SignServerMethodsInstance = &SignServerMethods{
+			NewStorageService: func(bucketName string) storage_adapters.StorageServiceInterface {
+				if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
+					return storage_adapters.NewLocalStorageService(bucketName)
+				} else {
+					return storage_adapters.NewS3Service(bucketName)
+				}
+			},
+			NewDynamoDBService: func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService {
+				return db_services.NewDynamoDBService(tableName, pkKey, skKey)
+			},
+		}
+	})
+	return SignServerMethodsInstance
 }

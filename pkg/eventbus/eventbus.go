@@ -63,7 +63,7 @@ func (b *EventBus) getOrErrorWorker(event string, eventType HandlerName) (*event
 	w, ok := b.getWorker(eventType)
 	if !ok {
 		err := fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
-		b.obsLogInc(event, map[string]interface{}{
+		b.ObsLogInc(event, map[string]interface{}{
 			"eventType": eventType,
 			"error":     err.Error(),
 		}, event, map[string]string{"eventType": string(eventType)})
@@ -80,7 +80,7 @@ func (b *EventBus) getIfExistsWorker(event string, eventType HandlerName) error 
 	_, ok := b.getWorker(eventType)
 	if ok {
 		err := fmt.Errorf("handler já registrado para o tipo de evento: %s", eventType)
-		b.obsLogInc(event, map[string]interface{}{
+		b.ObsLogInc(event, map[string]interface{}{
 			"eventType": eventType,
 			"error":     err.Error(),
 		}, event, map[string]string{"eventType": string(eventType)})
@@ -92,7 +92,7 @@ func (b *EventBus) getIfExistsWorker(event string, eventType HandlerName) error 
 func (b *EventBus) isValidHandlerName(event string, eventType HandlerName) error {
 	if !handlerNameRegex.MatchString(string(eventType)) {
 		err := fmt.Errorf("eventType inválido: deve começar com letra minúscula, conter apenas letras minúsculas, números ou sublinhado, e ter até 100 caracteres")
-		b.obsLogInc(event, map[string]interface{}{
+		b.ObsLogInc(event, map[string]interface{}{
 			"eventType": eventType,
 			"error":     err.Error(),
 		}, event, map[string]string{"eventType": string(eventType)})
@@ -104,15 +104,15 @@ func (b *EventBus) isValidHandlerName(event string, eventType HandlerName) error
 func (b *EventBus) isValidWorkerParams(event string, handler Handler, numWorkers int, queueBacklog int) error {
 	if handler == nil {
 		err := fmt.Errorf("handler não pode ser nil")
-		b.obsLogInc(event, map[string]interface{}{
+		b.ObsLogInc(event, map[string]interface{}{
 			"error": err.Error(),
 		}, event, map[string]string{"handler": "nil"})
 		return err
 	}
 
-	if numWorkers <= 0 || queueBacklog < numWorkers {
+	if numWorkers < 1 || queueBacklog < numWorkers {
 		err := fmt.Errorf("numWorkers deve ser > 0 e queueBacklog >= numWorkers")
-		b.obsLogInc(event, map[string]interface{}{
+		b.ObsLogInc(event, map[string]interface{}{
 			"error": err.Error(),
 		}, event, map[string]string{"numWorkers": strconv.Itoa(numWorkers), "queueBacklog": strconv.Itoa(queueBacklog)})
 		return err
@@ -121,7 +121,7 @@ func (b *EventBus) isValidWorkerParams(event string, handler Handler, numWorkers
 	return nil
 }
 
-func (b *EventBus) obsLogInc(event string, fields map[string]interface{}, metric string, tags map[string]string) {
+func (b *EventBus) ObsLogInc(event string, fields map[string]interface{}, metric string, tags map[string]string) {
 	if b.Obs != nil {
 		observability.LogInfo(event, fields)
 		b.Obs.Inc(metric, tags)
@@ -141,7 +141,7 @@ func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers i
 	pool := workerpool.New(numWorkers, queueBacklog)
 	pool.Start()
 	b.workers[eventType] = &eventWorker{pool: pool, handler: handler}
-	b.obsLogInc("eventbus.register.success", map[string]interface{}{
+	b.ObsLogInc("eventbus.register.success", map[string]interface{}{
 		"eventType":    eventType,
 		"numWorkers":   numWorkers,
 		"queueBacklog": queueBacklog,
@@ -159,7 +159,7 @@ func (b *EventBus) Unregister(eventType HandlerName) error {
 	}
 	w.pool.Stop()
 	delete(b.workers, eventType)
-	b.obsLogInc("eventbus.unregister.success", map[string]interface{}{
+	b.ObsLogInc("eventbus.unregister.success", map[string]interface{}{
 		"eventType": eventType,
 	}, "eventbus.unregister.success", map[string]string{"eventType": string(eventType)})
 	return nil
@@ -182,14 +182,14 @@ func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName
 		}
 		defer func() {
 			if r := recover(); r != nil {
-				b.obsLogInc("eventbus.handler.panic", map[string]interface{}{
+				b.ObsLogInc("eventbus.handler.panic", map[string]interface{}{
 					"eventType": eventType,
 					"panic":     r,
 				}, "eventbus.handler.panic", map[string]string{"eventType": string(eventType)})
 			}
 		}()
 		w.handler(realCtx, data)
-		b.obsLogInc("eventbus.handler.success", map[string]interface{}{
+		b.ObsLogInc("eventbus.handler.success", map[string]interface{}{
 			"eventType": eventType,
 		}, "eventbus.handler.success", map[string]string{"eventType": string(eventType)})
 	})
@@ -211,4 +211,25 @@ func (b *EventBus) Stop() {
 	for k := range b.workers {
 		delete(b.workers, k)
 	}
+}
+
+// WaitForHandlers aguarda até que todas as tasks enfileiradas sejam processadas pelos workers do(s) eventType(s) informados.
+// Se nenhum eventType for passado, aguarda todos os workers.
+func (b *EventBus) WaitForHandlers(eventTypes ...HandlerName) error {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if len(eventTypes) == 0 {
+		for _, w := range b.workers {
+			w.pool.Wait()
+		}
+		return nil
+	}
+	for _, eventType := range eventTypes {
+		w, err := b.getOrErrorWorker("eventbus.wait.error", eventType)
+		if err != nil {
+			return err
+		}
+		w.pool.Wait()
+	}
+	return nil
 }

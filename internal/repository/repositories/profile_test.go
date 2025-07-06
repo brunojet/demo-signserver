@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
 	"testing"
 
@@ -8,7 +9,8 @@ import (
 )
 
 func TestSignProfileService_CRUD(t *testing.T) {
-	service := NewProfileRepository()
+	cfg := config.GetSignServerConfig()
+	service := NewProfileRepository(cfg.ProfileTableName)
 
 	desc := "Dispositivos Postivo perfil 001"
 	profileId := "015"

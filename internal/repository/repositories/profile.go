@@ -23,9 +23,9 @@ type ProfileRepository struct {
 	Dynamo *db_services.DynamoDBService
 }
 
-func NewProfileRepository() *ProfileRepository {
-	cfg := config.GetSignServerConfig()
-	dynamo := db_services.NewDynamoDBService(cfg.ProfileTableName, SIGNER_KEY, PROFILE_ID_KEY)
+func NewProfileRepository(tableName string) *ProfileRepository {
+	methods := config.GetSignServerMethods()
+	dynamo := methods.NewDynamoDBService(tableName, SIGNER_KEY, PROFILE_ID_KEY)
 	return &ProfileRepository{Dynamo: dynamo}
 }
 

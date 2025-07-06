@@ -112,6 +112,11 @@ func (wp *WorkerPool) Stop() {
 	wp.wg.Wait()
 }
 
+// Wait aguarda todos os workers processarem as tasks pendentes (útil para testes)
+func (wp *WorkerPool) Wait() {
+	wp.wg.Wait()
+}
+
 // Exporta um snapshot das métricas atuais do pool
 func (wp *WorkerPool) ExportMetrics() WorkerPoolMetrics {
 	return WorkerPoolMetrics{

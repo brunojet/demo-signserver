@@ -4,8 +4,9 @@ import (
 	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
 	"demo-signserver/internal/repository/repositories"
-	storage_services "demo-signserver/pkg/storage/services"
+	"demo-signserver/pkg/storage/adapters"
 	"errors"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,18 +14,20 @@ import (
 
 type RequestService struct {
 	repository *repositories.RequestRepository
-	storage    *storage_services.S3Service
+	storage    adapters.StorageServiceInterface
 }
 
 func NewRequestService() *RequestService {
 	cfg := config.GetSignServerConfig()
-	storage := storage_services.NewS3Service(cfg.StorageBucketName)
+	methods := config.GetSignServerMethods()
+	storage := methods.NewStorageService(cfg.StorageBucketName)
 	repository := repositories.NewRequestRepository()
 	return &RequestService{repository: repository, storage: storage}
 }
 
 func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.SignRequestResponse, error) {
-	profileRepo := repositories.NewProfileRepository()
+	cfg := config.GetSignServerConfig()
+	profileRepo := repositories.NewProfileRepository(cfg.ProfileTableName)
 	profile, err := profileRepo.GetProfileByID(*request.SignerProfileId)
 	if err != nil || profile == nil {
 		return nil, errors.New("profile_id não encontrado")
@@ -36,7 +39,7 @@ func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.Sig
 		return nil, errors.New("erro ao gerar URL pré-assinada")
 	}
 
-	request.SetUnsingedBucketInfo(s.storage.Bucket, ID)
+	request.SetUnsignedBucketInfo(s.storage.GetBucketName(), ID)
 	request.SetID(ID)
 	err = s.repository.CreateRequest(request)
 
@@ -79,7 +82,7 @@ func (s *RequestService) getPresignedGetUrl(response *domain.SignGetResponse, bu
 	if response == nil || bucketInfo == nil || bucketInfo.ObjectKey == "" {
 		return
 	}
-	url, err := s.storage.GeneratePresignedGetURL(bucketInfo.ObjectKey, 15*time.Minute)
+	url, err := s.storage.GeneratePresignedURL(adapters.HttpMethodGet, bucketInfo.ObjectKey, 15*time.Minute)
 	if err != nil {
 		return
 	}
@@ -91,7 +94,7 @@ func (s *RequestService) getPresignedGetUrl(response *domain.SignGetResponse, bu
 // Gera um nome de arquivo único, gera URL pré-assinada e retorna (nome, url, erro)
 func (s *RequestService) generatePresignedPutURL() (string, string, error) {
 	fileName := uuid.New().String()
-	url, err := s.storage.GeneratePresignedPutURL(fileName, 15*time.Minute)
+	url, err := s.storage.GeneratePresignedURL(adapters.HttpMethodPut, filepath.Join("unsigned", fileName), 15*time.Minute)
 	if err != nil {
 		return "", "", err
 	}

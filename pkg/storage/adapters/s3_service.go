@@ -1,8 +1,10 @@
-package storage_services
+package adapters
 
 import (
 	"context"
+	"io"
 	"log"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -11,14 +13,26 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
+var _ StorageServiceInterface = (*S3Service)(nil)
+
 // S3Service encapsula operações com o S3.
 type S3Service struct {
 	Client *s3.Client
 	Bucket string
 }
 
+// GetBucketName implements StorageServiceInterface.
+func (s *S3Service) GetBucketName() string {
+	return s.Bucket
+}
+
+// GeneratePresignedURL implements storage_services.StorageServiceInterface.
+func (s *S3Service) GeneratePresignedURL(httpMethod HttpMethod, key string, expires time.Duration) (string, error) {
+	panic("unimplemented")
+}
+
 // NewS3ServiceWithConfigLoader permite injetar função de carregamento de config (para testes).
-func NewS3ServiceWithConfigLoader(bucket string, loadConfig func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error)) (*S3Service, error) {
+func NewS3ServiceWithConfigLoader(bucket string, loadConfig func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error)) (StorageServiceInterface, error) {
 	cfg, err := loadConfig(context.Background())
 	if err != nil {
 		return nil, err
@@ -28,7 +42,7 @@ func NewS3ServiceWithConfigLoader(bucket string, loadConfig func(ctx context.Con
 }
 
 // NewS3Service padrão, usa config.LoadDefaultConfig
-func NewS3Service(bucket string) *S3Service {
+func NewS3Service(bucket string) StorageServiceInterface {
 	s3Service, err := NewS3ServiceWithConfigLoader(bucket, config.LoadDefaultConfig)
 	if err != nil {
 		log.Fatalf("[S3Service] Erro ao criar S3Service: %v", err)
@@ -76,6 +90,45 @@ func (s *S3Service) GeneratePresignedGetURL(key string, expires time.Duration) (
 		return "", err
 	}
 	return presignedReq.URL, nil
+}
+
+// DownloadFile baixa um objeto do S3 para um arquivo local
+func (s *S3Service) DownloadFile(key, dest string) error {
+	input := &s3.GetObjectInput{
+		Bucket: aws.String(s.Bucket),
+		Key:    aws.String(key),
+	}
+	resp, err := s.Client.GetObject(context.Background(), input)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	f, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = io.Copy(f, resp.Body)
+	return err
+}
+
+// UploadFile faz upload de um arquivo local para o S3
+func (s *S3Service) UploadFile(key, src string) error {
+	f, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	input := &s3.PutObjectInput{
+		Bucket: aws.String(s.Bucket),
+		Key:    aws.String(key),
+		Body:   f,
+	}
+	_, err = s.Client.PutObject(context.Background(), input)
+	return err
 }
 
 // S3ServiceInterface define as operações expostas para uso/mocks
