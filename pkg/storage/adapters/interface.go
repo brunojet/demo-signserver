@@ -1,6 +1,9 @@
 package adapters
 
-import "time"
+import (
+	"io"
+	"time"
+)
 
 type HttpMethod string
 
@@ -12,6 +15,7 @@ const (
 type StorageServiceInterface interface {
 	GetBucketName() string
 	GeneratePresignedURL(httpMethod HttpMethod, key string, expires time.Duration) (string, error)
-	DownloadFile(key, dest string) error
-	UploadFile(key, src string) error
+	DownloadFileFromS3(key string) error
+	UploadToS3(key string) error
+	OpenWorkFile(key string) (io.ReadWriteCloser, error)
 }

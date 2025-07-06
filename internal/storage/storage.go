@@ -3,6 +3,7 @@ package storages
 import (
 	"demo-signserver/internal/config"
 	"demo-signserver/pkg/storage/adapters"
+	"io"
 	"log"
 	"time"
 )
@@ -28,10 +29,17 @@ func (s *StorageService) GeneratePresignedURL(httpMethod adapters.HttpMethod, ke
 	return s.storage.GeneratePresignedURL(httpMethod, key, expires)
 }
 
-func (s *StorageService) DownloadFile(key, dest string) error {
-	return s.storage.DownloadFile(key, dest)
+// DownloadFileFromS3 implements adapters.StorageServiceInterface.
+func (s *StorageService) DownloadFileFromS3(key string) error {
+	return s.storage.DownloadFileFromS3(key)
 }
 
-func (s *StorageService) UploadFile(key, src string) error {
-	return s.storage.UploadFile(key, src)
+// UploadToS3 implements adapters.StorageServiceInterface.
+func (s *StorageService) UploadToS3(key string) error {
+	return s.storage.UploadToS3(key)
+}
+
+// OpenWorkFile implements adapters.StorageServiceInterface.
+func (s *StorageService) OpenWorkFile(key string) (io.ReadWriteCloser, error) {
+	return s.storage.OpenWorkFile(key)
 }

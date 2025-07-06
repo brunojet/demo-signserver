@@ -3,7 +3,6 @@ package signer
 import (
 	"context"
 	"errors"
-	"os"
 	"path/filepath"
 
 	"demo-signserver/internal/repository/domain"
@@ -88,10 +87,8 @@ func UploadReceivedHandler(bus *eventbus.EventBus) eventbus.Handler {
 		}()
 
 		// Obtém o diretório temporário do sistema operacional
-		tmpDir := filepath.Clean(os.TempDir())
-		dst := filepath.Join(tmpDir, evt.Key)
 
-		err = storage.DownloadFile(evt.Key, dst)
+		err = storage.DownloadFileFromS3(evt.Key)
 
 		if err != nil {
 			updateRequest.SetSignerStatus(domain.SignerStatusSigningFailed, &domain.SignerError{
@@ -106,7 +103,7 @@ func UploadReceivedHandler(bus *eventbus.EventBus) eventbus.Handler {
 
 		err = bus.Publish("sign_process", SignProcessEvent{
 			ID:   ID,
-			File: dst,
+			File: evt.Key,
 		})
 
 		if err != nil {

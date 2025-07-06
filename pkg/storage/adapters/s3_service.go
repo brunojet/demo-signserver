@@ -21,6 +21,21 @@ type S3Service struct {
 	Bucket string
 }
 
+// OpenWorkFile implements StorageServiceInterface.
+func (s *S3Service) OpenWorkFile(key string) (io.ReadWriteCloser, error) {
+	panic("unimplemented")
+}
+
+// DownloadFileFromS3 implements StorageServiceInterface.
+func (s *S3Service) DownloadFileFromS3(key string) error {
+	panic("unimplemented")
+}
+
+// UploadToS3 implements StorageServiceInterface.
+func (s *S3Service) UploadToS3(key string) error {
+	panic("unimplemented")
+}
+
 // GetBucketName implements StorageServiceInterface.
 func (s *S3Service) GetBucketName() string {
 	return s.Bucket

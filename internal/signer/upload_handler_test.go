@@ -1,6 +1,7 @@
 package signer
 
 import (
+	"context"
 	"log"
 	"os"
 	"path/filepath"
@@ -49,32 +50,33 @@ func TestMain(m *testing.M) {
 func TestUploadReceivedHandler_Success(t *testing.T) {
 	storage := storages.NewStorageService()
 	bucket := storage.GetBucketName()
-	key := uuid.New().String()
+	key := filepath.Join("unsigned", uuid.New().String())
 	sha := "sha256dummy"
 	size := int64(11)
 
 	filePath := filepath.Join(storage.GetBucketName(), key)
-	os.WriteFile(filePath, []byte("hello world"), 0644)
+
+	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+		panic("erro ao criar diretório base: " + err.Error())
+	}
+
+	err := os.WriteFile(filePath, []byte("hello world"), 0644)
+	assert.NoError(t, err, "Erro ao escrever arquivo de teste")
 
 	// Setup: cria request no repositório fake
 	repo := repositories.NewRequestRepository()
 	request := &domain.SignRequest{}
-	request.SetID(key)
+	request.SetID(filepath.Base(key))
+	request.SetSignerStatus(domain.SignerStatusCreated, nil)
 	request.SetUnsignedBucketInfo(bucket, key)
 	repo.CreateRequest(request)
-
-	// Setup: EventBus fake
-	bus.Publish("upload_received", UploadEvent{
+	handler := UploadReceivedHandler(bus)
+	handler(context.Background(), UploadEvent{
 		Bucket: bucket,
 		Key:    key,
 		SHA256: sha,
 		Size:   size,
 	})
-	err := bus.WaitForHandlers("upload_received")
-	assert.NoError(t, err, "Erro ao esperar handlers")
-	savedFilePath := filepath.Join(storage.GetBucketName(), key)
-	info, err := os.Stat(savedFilePath)
-	assert.NoError(t, err, "Arquivo não foi salvo no bucket")
-	assert.False(t, info.IsDir(), "O caminho salvo não é um diretório")
-	assert.Equal(t, size, info.Size(), "Tamanho do arquivo salvo está incorreto")
+	_, err = storage.OpenWorkFile(key)
+	assert.NoError(t, err, "Arquivo não foi salvo no workerpath")
 }
