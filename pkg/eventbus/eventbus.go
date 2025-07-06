@@ -106,7 +106,7 @@ func (b *EventBus) isValidWorkerParams(event string, handler Handler, numWorkers
 		err := fmt.Errorf("handler não pode ser nil")
 		b.obsLogInc(event, map[string]interface{}{
 			"error": err.Error(),
-		}, "eventbus_register_error", map[string]string{"handler": "nil"})
+		}, event, map[string]string{"handler": "nil"})
 		return err
 	}
 
@@ -145,7 +145,7 @@ func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers i
 		"eventType":    eventType,
 		"numWorkers":   numWorkers,
 		"queueBacklog": queueBacklog,
-	}, "eventbus_register_success", map[string]string{"eventType": string(eventType)})
+	}, "eventbus.register.success", map[string]string{"eventType": string(eventType)})
 	return nil
 }
 
@@ -161,7 +161,7 @@ func (b *EventBus) Unregister(eventType HandlerName) error {
 	delete(b.workers, eventType)
 	b.obsLogInc("eventbus.unregister.success", map[string]interface{}{
 		"eventType": eventType,
-	}, "eventbus_unregister_success", map[string]string{"eventType": string(eventType)})
+	}, "eventbus.unregister.success", map[string]string{"eventType": string(eventType)})
 	return nil
 }
 
@@ -170,9 +170,6 @@ func (b *EventBus) Unregister(eventType HandlerName) error {
 func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName, data any) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.obsLogInc("eventbus.publish.called", map[string]interface{}{
-		"eventType": eventType,
-	}, "eventbus_publish_called", map[string]string{"eventType": string(eventType)})
 	w, err := b.getOrErrorWorker("eventbus.publish.error", eventType)
 	if err != nil {
 		return err
@@ -188,13 +185,13 @@ func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName
 				b.obsLogInc("eventbus.handler.panic", map[string]interface{}{
 					"eventType": eventType,
 					"panic":     r,
-				}, "eventbus_handler_panic", map[string]string{"eventType": string(eventType)})
+				}, "eventbus.handler.panic", map[string]string{"eventType": string(eventType)})
 			}
 		}()
 		w.handler(realCtx, data)
 		b.obsLogInc("eventbus.handler.success", map[string]interface{}{
 			"eventType": eventType,
-		}, "eventbus_handler_success", map[string]string{"eventType": string(eventType)})
+		}, "eventbus.handler.success", map[string]string{"eventType": string(eventType)})
 	})
 	return nil
 }

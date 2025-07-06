@@ -101,7 +101,7 @@ func TestPanicInHandler(t *testing.T) {
 	}, 1, 2)
 	_ = bus.Publish("panic", nil)
 	time.Sleep(20 * time.Millisecond)
-	assert.Equal(t, 1, sink.counts["eventbus_handler_panic"], "esperado incremento de métrica de panic")
+	assert.Equal(t, 1, sink.counts["eventbus.handler.panic"], "esperado incremento de métrica de panic")
 }
 
 func TestObservabilityIntegration(t *testing.T) {
@@ -110,7 +110,7 @@ func TestObservabilityIntegration(t *testing.T) {
 	_ = bus.Register("obs", func(ctx context.Context, event any) {}, 1, 2)
 	_ = bus.Publish("obs", nil)
 	time.Sleep(20 * time.Millisecond)
-	assert.Equal(t, 1, sink.counts["eventbus_publish_called"], "esperado incremento de métrica de chamada de publish")
+	assert.Equal(t, 1, sink.counts["eventbus.handler.success"], "esperado incremento de métrica de sucesso do handler")
 }
 
 func TestUnregisterAndStop(t *testing.T) {
