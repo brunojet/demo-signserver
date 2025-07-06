@@ -54,7 +54,7 @@ func (b *EventBus) getWorker(eventType HandlerName) (*eventWorker, bool) {
 	return w, ok
 }
 
-func inValidHandlerName(eventType HandlerName) error {
+func isValidHandlerName(eventType HandlerName) error {
 	if !handlerNameRegex.MatchString(string(eventType)) {
 		return fmt.Errorf("eventType inválido: deve começar com letra minúscula, conter apenas letras minúsculas, números ou sublinhado, e ter até 100 caracteres")
 	}
@@ -74,7 +74,7 @@ func isValidWorkerParams(handler Handler, numWorkers int, queueBacklog int) erro
 }
 
 func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers int, queueBacklog int) error {
-	if err := inValidHandlerName(eventType); err != nil {
+	if err := isValidHandlerName(eventType); err != nil {
 		return err
 	}
 	if err := isValidWorkerParams(handler, numWorkers, queueBacklog); err != nil {
@@ -93,7 +93,7 @@ func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers i
 
 // Unregister remove o handler e para os workers do tipo de evento.
 func (b *EventBus) Unregister(eventType HandlerName) error {
-	if err := inValidHandlerName(eventType); err != nil {
+	if err := isValidHandlerName(eventType); err != nil {
 		return err
 	}
 	b.mu.Lock()
@@ -110,7 +110,7 @@ func (b *EventBus) Unregister(eventType HandlerName) error {
 // Publish envia o evento para o pool de workers do tipo, se existir.
 // Permite passar um contexto externo para cancelamento/timeout do handler.
 func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName, data any) error {
-	if err := inValidHandlerName(eventType); err != nil {
+	if err := isValidHandlerName(eventType); err != nil {
 		return err
 	}
 	b.mu.RLock()
