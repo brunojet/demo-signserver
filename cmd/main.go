@@ -10,7 +10,8 @@ import (
 )
 
 func main() {
-	services.NewSignerService()
+	signerSvc := services.NewSignerService()
+	signerSvc.Start()
 	r := gin.Default()
 
 	// Rotas de perfil

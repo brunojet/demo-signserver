@@ -34,6 +34,10 @@ func UploadReceivedHandler(bus *eventbus.EventBus) eventbus.Handler {
 		request, err := repository.GetRequestByID(ID)
 
 		if err != nil {
+			bus.ObsLogInc("upload.receive.handler", map[string]interface{}{
+				"request_id": ID,
+				"error":      "Request not found",
+			}, "upload.receive.error", nil)
 			return
 		}
 

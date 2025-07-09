@@ -10,6 +10,8 @@ import (
 	"log"
 	"os"
 	"sync"
+
+	"demo-signserver/pkg/eventbus"
 )
 
 var (
@@ -20,9 +22,10 @@ var (
 )
 
 type SignServerMethods struct {
-	NewStorageService   func(bucketName string) storage_adapters.StorageServiceInterface
-	NewDynamoDBService  func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService
-	MessageQueueAdapter func(unsignedDir, bucket string) message_adapters.MessageQueueAdapterInterface
+	NewStorageService      func(bucketName string) storage_adapters.StorageServiceInterface
+	NewDynamoDBService     func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService
+	NewMessageQueueAdapter func(unsignedDir, bucket string) message_adapters.MessageQueueAdapterInterface
+	NewEventBus            func() *eventbus.EventBus
 }
 
 type SignServerConfig struct {
@@ -67,12 +70,14 @@ func GetSignServerConfig() *SignServerConfig {
 func GetSignServerMethods() *SignServerMethods {
 	onceMethods.Do(func() {
 		sink := observability.NewAccumulatorSink()
-		metricsService := observability.NewMetricsService(sink)
 
 		SignServerMethodsInstance = &SignServerMethods{
-			MessageQueueAdapter: func(bucketName, unsignedDir string) message_adapters.MessageQueueAdapterInterface {
+			NewMessageQueueAdapter: func(bucketName, unsignedDir string) message_adapters.MessageQueueAdapterInterface {
 				// Replace with a real MetricsSink if available
-				return message_adapters.NewLocalS3EventQueue(bucketName, unsignedDir, metricsService)
+				return message_adapters.NewLocalS3EventQueue(bucketName, unsignedDir, sink)
+			},
+			NewEventBus: func() *eventbus.EventBus {
+				return eventbus.NewEventBusWithSink(sink)
 			},
 			NewStorageService: func(bucketName string) storage_adapters.StorageServiceInterface {
 				if environment := os.Getenv("ENVIRONMENT"); environment == "local" {

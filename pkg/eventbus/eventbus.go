@@ -44,10 +44,9 @@ func NewEventBusWithSink(sink observability.MetricsSink) *EventBus {
 	if sink != nil {
 		obs = observability.NewMetricsService(sink)
 	}
-	return &EventBus{
-		workers: make(WorkerMap),
-		Obs:     obs,
-	}
+	eventBus := NewEventBus()
+	eventBus.Obs = obs
+	return eventBus
 }
 
 func (b *EventBus) getWorker(eventType HandlerName) (*eventWorker, bool) {
@@ -188,10 +187,10 @@ func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName
 				}, "eventbus.handler.panic", map[string]string{"eventType": string(eventType)})
 			}
 		}()
-		w.handler(realCtx, data)
 		b.ObsLogInc("eventbus.handler.success", map[string]interface{}{
 			"eventType": eventType,
 		}, "eventbus.handler.success", map[string]string{"eventType": string(eventType)})
+		w.handler(realCtx, data)
 	})
 	return nil
 }
