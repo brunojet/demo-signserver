@@ -1,4 +1,4 @@
-package signer
+package handlers
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 type UploadEvent struct {
 	Bucket string
 	Key    string
-	SHA256 string
+	ETag   string
 	Size   int64
 }
 
@@ -96,7 +96,7 @@ func UploadReceivedHandler(bus *eventbus.EventBus) eventbus.Handler {
 			return
 		}
 
-		updateRequest.SetUnsignedBucketInfoShaAndSize(evt.SHA256, evt.Size)
+		updateRequest.SetUnsignedBucketInfoShaAndSize(evt.ETag, evt.Size)
 		updateRequest.SetSignerStatus(domain.SignerStatusUploaded, nil)
 
 		err = bus.Publish("sign_process", SignProcessEvent{

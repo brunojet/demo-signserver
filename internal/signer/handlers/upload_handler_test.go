@@ -1,4 +1,4 @@
-package signer
+package handlers
 
 import (
 	"context"
@@ -84,7 +84,7 @@ func TestUploadReceivedHandler_Success(t *testing.T) {
 	handler(context.Background(), UploadEvent{
 		Bucket: bucket,
 		Key:    key,
-		SHA256: sha,
+		ETag:   sha,
 		Size:   size,
 	})
 }

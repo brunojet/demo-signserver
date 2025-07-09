@@ -2,6 +2,7 @@ package main
 
 import (
 	"demo-signserver/internal/request/http_handlers"
+	"demo-signserver/internal/signer/services"
 	"log"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 )
 
 func main() {
+	services.NewSignerService()
 	r := gin.Default()
 
 	// Rotas de perfil

@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	message_adapters "demo-signserver/pkg/message/adapters"
 	db_services "demo-signserver/pkg/repository/services"
 	storage_adapters "demo-signserver/pkg/storage/adapters"
 	"fmt"
@@ -18,8 +19,9 @@ var (
 )
 
 type SignServerMethods struct {
-	NewStorageService  func(bucketName string) storage_adapters.StorageServiceInterface
-	NewDynamoDBService func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService
+	NewStorageService   func(bucketName string) storage_adapters.StorageServiceInterface
+	NewDynamoDBService  func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService
+	MessageQueueAdapter func(unsignedDir, bucket string) message_adapters.MessageQueueAdapterInterface
 }
 
 type SignServerConfig struct {
@@ -64,6 +66,9 @@ func GetSignServerConfig() *SignServerConfig {
 func GetSignServerMethods() *SignServerMethods {
 	onceMethods.Do(func() {
 		SignServerMethodsInstance = &SignServerMethods{
+			MessageQueueAdapter: func(bucketName, unsignedDir string) message_adapters.MessageQueueAdapterInterface {
+				return message_adapters.NewLocalS3EventQueue(bucketName, unsignedDir)
+			},
 			NewStorageService: func(bucketName string) storage_adapters.StorageServiceInterface {
 				if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
 					return storage_adapters.NewLocalStorageService(bucketName)
