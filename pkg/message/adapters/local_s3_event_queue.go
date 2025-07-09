@@ -21,11 +21,11 @@ type LocalS3EventQueue struct {
 	WatcherPath string // caminho base simulando o bucket
 	Bucket      string
 	KeyPath     string
-	Metrics     observability.MetricsSink // opcional
+	Metrics     *observability.MetricsService // opcional
 }
 
 // NewLocalS3EventQueue cria um novo watcher para o diretório local
-func NewLocalS3EventQueue(bucket, keyPath string, metrics observability.MetricsSink) *LocalS3EventQueue {
+func NewLocalS3EventQueue(bucket, keyPath string, metrics *observability.MetricsService) *LocalS3EventQueue {
 	return &LocalS3EventQueue{
 		WatcherPath: filepath.Join(os.TempDir(), bucket, keyPath),
 		Bucket:      bucket,
@@ -86,20 +86,14 @@ func (l *LocalS3EventQueue) Start(onMessage func(event any)) (stop func()) {
 							},
 						}},
 					}
-					if l.Metrics != nil {
-						l.Metrics.Send(observability.Metric{
-							Tags: map[string]string{
-								"bucket": l.Bucket,
-								"key":    key,
-								"size":   fmt.Sprintf("%d", size),
-							},
-						})
-						l.Metrics.Send(observability.Metric{
-							Name:  "local_s3_event_queue.file_created",
-							Tags:  map[string]string{"bucket": l.Bucket},
-							Value: 1,
-						})
-					}
+					l.Metrics.Inc(
+						"local_s3_event_queue.file_created",
+						map[string]string{
+							"bucket": l.Bucket,
+							"key":    key,
+							"size":   fmt.Sprintf("%d", size),
+						},
+					)
 					onMessage(s3Event)
 				}
 			case err := <-watcher.Errors:

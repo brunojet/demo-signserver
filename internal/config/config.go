@@ -66,11 +66,13 @@ func GetSignServerConfig() *SignServerConfig {
 
 func GetSignServerMethods() *SignServerMethods {
 	onceMethods.Do(func() {
+		sink := observability.NewAccumulatorSink()
+		metricsService := observability.NewMetricsService(sink)
+
 		SignServerMethodsInstance = &SignServerMethods{
 			MessageQueueAdapter: func(bucketName, unsignedDir string) message_adapters.MessageQueueAdapterInterface {
 				// Replace with a real MetricsSink if available
-				var metricsSink observability.MetricsSink = nil
-				return message_adapters.NewLocalS3EventQueue(bucketName, unsignedDir, metricsSink)
+				return message_adapters.NewLocalS3EventQueue(bucketName, unsignedDir, metricsService)
 			},
 			NewStorageService: func(bucketName string) storage_adapters.StorageServiceInterface {
 				if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
