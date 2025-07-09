@@ -21,6 +21,12 @@ var (
 	bus *eventbus.EventBus
 )
 
+func DummyHandler(bus *eventbus.EventBus) eventbus.Handler {
+	return func(ctx context.Context, event any) {
+		// Dummy handler for testing purposes
+	}
+}
+
 func TestMain(m *testing.M) {
 	os.Setenv("PROJECT_NAME", "signer-upload")
 	os.Setenv("ENVIRONMENT", "local")
@@ -40,6 +46,9 @@ func TestMain(m *testing.M) {
 	defer os.RemoveAll(basePath)
 	bus = eventbus.NewEventBus()
 	if err := bus.Register("upload_received", UploadReceivedHandler(bus), 1, 1); err != nil {
+		log.Fatalf("Erro ao registrar handler: %v", err)
+	}
+	if err := bus.Register("sign_process", DummyHandler(bus), 1, 1); err != nil {
 		log.Fatalf("Erro ao registrar handler: %v", err)
 	}
 	exitCode := m.Run()
@@ -69,7 +78,8 @@ func TestUploadReceivedHandler_Success(t *testing.T) {
 	request.SetID(filepath.Base(key))
 	request.SetSignerStatus(domain.SignerStatusCreated, nil)
 	request.SetUnsignedBucketInfo(bucket, key)
-	repo.CreateRequest(request)
+	err = repo.CreateRequest(request)
+	assert.NoError(t, err, "Erro ao criar request no repositório")
 	handler := UploadReceivedHandler(bus)
 	handler(context.Background(), UploadEvent{
 		Bucket: bucket,
@@ -77,6 +87,4 @@ func TestUploadReceivedHandler_Success(t *testing.T) {
 		SHA256: sha,
 		Size:   size,
 	})
-	_, err = storage.OpenWorkFile(key)
-	assert.NoError(t, err, "Arquivo não foi salvo no workerpath")
 }

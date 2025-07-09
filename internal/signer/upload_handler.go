@@ -22,7 +22,7 @@ func UploadReceivedHandler(bus *eventbus.EventBus) eventbus.Handler {
 	return func(ctx context.Context, event any) {
 		evt, ok := event.(UploadEvent)
 		if !ok {
-			bus.ObsLogInc("upload.receive.handler", map[string]interface{}{"error": "event type mismatch"}, "upload_receive_error", nil)
+			bus.ObsLogInc("upload.receive.handler", map[string]interface{}{"error": "event type mismatch"}, "upload.receive.error", nil)
 			return
 		}
 
@@ -42,7 +42,7 @@ func UploadReceivedHandler(bus *eventbus.EventBus) eventbus.Handler {
 			bus.ObsLogInc("upload.receive.handler", map[string]interface{}{
 				"request_id": ID,
 				"error":      "bucket, key, sha256 or size mismatch",
-			}, "upload_receive_error", nil)
+			}, "upload.receive.error", nil)
 			return
 		}
 
@@ -85,8 +85,6 @@ func UploadReceivedHandler(bus *eventbus.EventBus) eventbus.Handler {
 
 			repository.UpdateRequest(ID, updateRequest)
 		}()
-
-		// Obtém o diretório temporário do sistema operacional
 
 		err = storage.DownloadFileFromS3(evt.Key)
 
