@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	message_adapters "demo-signserver/pkg/message/adapters"
+	"demo-signserver/pkg/observability"
 	db_services "demo-signserver/pkg/repository/services"
 	storage_adapters "demo-signserver/pkg/storage/adapters"
 	"fmt"
@@ -67,7 +68,9 @@ func GetSignServerMethods() *SignServerMethods {
 	onceMethods.Do(func() {
 		SignServerMethodsInstance = &SignServerMethods{
 			MessageQueueAdapter: func(bucketName, unsignedDir string) message_adapters.MessageQueueAdapterInterface {
-				return message_adapters.NewLocalS3EventQueue(bucketName, unsignedDir)
+				// Replace with a real MetricsSink if available
+				var metricsSink observability.MetricsSink = nil
+				return message_adapters.NewLocalS3EventQueue(bucketName, unsignedDir, metricsSink)
 			},
 			NewStorageService: func(bucketName string) storage_adapters.StorageServiceInterface {
 				if environment := os.Getenv("ENVIRONMENT"); environment == "local" {

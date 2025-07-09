@@ -3,11 +3,14 @@ package adapters
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	"demo-signserver/pkg/observability"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/fsnotify/fsnotify"
@@ -18,14 +21,16 @@ type LocalS3EventQueue struct {
 	WatcherPath string // caminho base simulando o bucket
 	Bucket      string
 	KeyPath     string
+	Metrics     observability.MetricsSink // opcional
 }
 
 // NewLocalS3EventQueue cria um novo watcher para o diretório local
-func NewLocalS3EventQueue(bucket, keyPath string) *LocalS3EventQueue {
+func NewLocalS3EventQueue(bucket, keyPath string, metrics observability.MetricsSink) *LocalS3EventQueue {
 	return &LocalS3EventQueue{
 		WatcherPath: filepath.Join(os.TempDir(), bucket, keyPath),
 		Bucket:      bucket,
 		KeyPath:     keyPath,
+		Metrics:     metrics,
 	}
 }
 
@@ -80,6 +85,20 @@ func (l *LocalS3EventQueue) Start(onMessage func(event any)) (stop func()) {
 								},
 							},
 						}},
+					}
+					if l.Metrics != nil {
+						l.Metrics.Send(observability.Metric{
+							Tags: map[string]string{
+								"bucket": l.Bucket,
+								"key":    key,
+								"size":   fmt.Sprintf("%d", size),
+							},
+						})
+						l.Metrics.Send(observability.Metric{
+							Name:  "local_s3_event_queue.file_created",
+							Tags:  map[string]string{"bucket": l.Bucket},
+							Value: 1,
+						})
 					}
 					onMessage(s3Event)
 				}
