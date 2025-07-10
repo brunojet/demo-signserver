@@ -201,9 +201,6 @@ func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName
 		}()
 		err = w.handler(realCtx, data)
 	})
-	b.ObsHandler.HandlerLogInfo("eventbus.publish_with_context", "evento publicado com sucesso", map[string]interface{}{
-		"eventType": eventType,
-	})
 	return nil
 }
 
