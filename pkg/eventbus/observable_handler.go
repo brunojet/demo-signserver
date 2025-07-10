@@ -18,7 +18,7 @@ type ObservableHandler interface {
 	HandlerSuccess(ctx HandlerCtx)
 	HandlerError(ctx HandlerCtx, err error)
 	HandlerPanic(ctx HandlerCtx, panicVal any)
-	HandlerLog(eventCaller, message string, fields map[string]interface{})
+	HandlerLog(caller, message string, fields map[string]interface{})
 }
 
 type DefaultObservableHandler struct {
@@ -84,9 +84,9 @@ func (o *DefaultObservableHandler) HandlerPanic(ctx HandlerCtx, panicVal any) {
 	}
 }
 
-func (o *DefaultObservableHandler) HandlerLog(eventCaller, message string, fields map[string]interface{}) {
+func (o *DefaultObservableHandler) HandlerLog(caller, message string, fields map[string]interface{}) {
 	if o.Obs != nil {
-		fields["eventCaller"] = eventCaller
+		fields["caller"] = caller
 		fields["traceID"] = o.TraceID
 		observability.LogInfo(message, fields)
 	}

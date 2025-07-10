@@ -55,14 +55,14 @@ func (b *EventBus) getWorker(eventType HandlerName) (*eventWorker, bool) {
 	return w, ok
 }
 
-func (b *EventBus) getOrErrorWorker(eventCaller string, eventType HandlerName) (*eventWorker, error) {
-	if err := b.isValidHandlerName(eventCaller, eventType); err != nil {
+func (b *EventBus) getOrErrorWorker(caller string, eventType HandlerName) (*eventWorker, error) {
+	if err := b.isValidHandlerName(caller, eventType); err != nil {
 		return nil, err
 	}
 	w, ok := b.getWorker(eventType)
 	if !ok {
 		err := fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
-		b.ObsHandler.HandlerLog(eventCaller, err.Error(), map[string]interface{}{
+		b.ObsHandler.HandlerLog(caller, err.Error(), map[string]interface{}{
 			"eventType": eventType,
 			"error":     err.Error(),
 		})
@@ -71,14 +71,14 @@ func (b *EventBus) getOrErrorWorker(eventCaller string, eventType HandlerName) (
 	return w, nil
 }
 
-func (b *EventBus) getIfExistsWorker(eventCaller string, eventType HandlerName) error {
-	if err := b.isValidHandlerName(eventCaller, "falha"); err != nil {
+func (b *EventBus) getIfExistsWorker(caller string, eventType HandlerName) error {
+	if err := b.isValidHandlerName(caller, "falha"); err != nil {
 		return err
 	}
 	_, ok := b.getWorker(eventType)
 	if ok {
 		err := fmt.Errorf("handler já registrado para o tipo de evento: %s", eventType)
-		b.ObsHandler.HandlerLog(eventCaller, err.Error(), map[string]interface{}{
+		b.ObsHandler.HandlerLog(caller, err.Error(), map[string]interface{}{
 			"eventType": eventType,
 			"error":     err.Error(),
 		})
@@ -87,10 +87,10 @@ func (b *EventBus) getIfExistsWorker(eventCaller string, eventType HandlerName) 
 	return nil
 }
 
-func (b *EventBus) isValidHandlerName(eventCaller string, eventType HandlerName) error {
+func (b *EventBus) isValidHandlerName(caller string, eventType HandlerName) error {
 	if !handlerNameRegex.MatchString(string(eventType)) {
 		err := fmt.Errorf("eventType inválido: deve começar com letra minúscula, conter apenas letras minúsculas, números ou sublinhado, e ter até 100 caracteres")
-		b.ObsHandler.HandlerLog(eventCaller, "falha", map[string]interface{}{
+		b.ObsHandler.HandlerLog(caller, "falha", map[string]interface{}{
 			"eventType": eventType,
 			"error":     err.Error(),
 		})
@@ -99,10 +99,10 @@ func (b *EventBus) isValidHandlerName(eventCaller string, eventType HandlerName)
 	return nil
 }
 
-func (b *EventBus) isValidWorkerParams(eventCaller string, handler Handler, numWorkers int, queueBacklog int) error {
+func (b *EventBus) isValidWorkerParams(caller string, handler Handler, numWorkers int, queueBacklog int) error {
 	if handler == nil {
 		err := fmt.Errorf("handler não pode ser nil")
-		b.ObsHandler.HandlerLog(eventCaller, "falha", map[string]interface{}{
+		b.ObsHandler.HandlerLog(caller, "falha", map[string]interface{}{
 			"error": err.Error(),
 		})
 		return err
@@ -110,7 +110,7 @@ func (b *EventBus) isValidWorkerParams(eventCaller string, handler Handler, numW
 
 	if numWorkers < 1 || queueBacklog < numWorkers {
 		err := fmt.Errorf("numWorkers deve ser > 0 e queueBacklog >= numWorkers")
-		b.ObsHandler.HandlerLog(eventCaller, "falha", map[string]interface{}{
+		b.ObsHandler.HandlerLog(caller, "falha", map[string]interface{}{
 			"error":        err.Error(),
 			"numWorkers":   numWorkers,
 			"queueBacklog": queueBacklog,
