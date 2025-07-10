@@ -22,8 +22,8 @@ var (
 )
 
 func DummyHandler(bus *eventbus.EventBus) eventbus.Handler {
-	return func(ctx context.Context, event any) {
-		// Dummy handler for testing purposes
+	return func(ctx context.Context, event any) error {
+		return nil
 	}
 }
 
@@ -60,7 +60,7 @@ func TestUploadReceivedHandler_Success(t *testing.T) {
 	storage := storages.NewStorageService()
 	bucket := storage.GetBucketName()
 	key := filepath.Join("unsigned", uuid.New().String())
-	sha := "sha256dummy"
+	etag := "sha256dummy"
 	size := int64(11)
 
 	filePath := filepath.Join(storage.GetBucketName(), key)
@@ -77,14 +77,14 @@ func TestUploadReceivedHandler_Success(t *testing.T) {
 	request := &domain.SignRequest{}
 	request.SetID(filepath.Base(key))
 	request.SetSignerStatus(domain.SignerStatusCreated, nil)
-	request.SetUnsignedBucketInfo(bucket, key)
+	request.SetUnsignedBucketInfo(bucket, key, etag, size)
 	err = repo.CreateRequest(request)
 	assert.NoError(t, err, "Erro ao criar request no repositório")
 	handler := UploadReceivedHandler(bus)
 	handler(context.Background(), UploadEvent{
 		Bucket: bucket,
 		Key:    key,
-		ETag:   sha,
+		ETag:   etag,
 		Size:   size,
 	})
 }

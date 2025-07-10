@@ -5,15 +5,13 @@ import (
 	"demo-signserver/pkg/eventbus"
 )
 
-type SignProcessEvent struct {
-	ID   string // ID do pedido de assinatura
-	File string // Caminho do arquivo a ser assinado
-}
+type SignProcessEvent string
 
 // Evento: sign_process
 func SignProcessHandler(bus *eventbus.EventBus) eventbus.Handler {
-	return func(ctx context.Context, event any) {
+	return func(ctx context.Context, event any) error {
 		// TODO: processar assinatura, publicar evento de upload assinado
 		// bus.Publish("signed_upload", ...)
+		return nil
 	}
 }

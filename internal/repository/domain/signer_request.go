@@ -7,10 +7,10 @@ import (
 
 // BucketInfo representa informações de um arquivo em um bucket.
 type BucketInfo struct {
-	BucketName string `dynamodbav:"bucket_name"`
-	ObjectKey  string `dynamodbav:"object_key"`
-	Size       int64  `dynamodbav:"size"`
-	SHA256     string `dynamodbav:"sha256"`
+	Bucket string `dynamodbav:"bucket_name"`
+	Key    string `dynamodbav:"object_key"`
+	Size   int64  `dynamodbav:"size"`
+	ETag   string `dynamodbav:"sha256"`
 }
 
 // SignerStatus representa os possíveis passos do fluxo de assinatura.
@@ -77,21 +77,13 @@ type SignGetResponse struct {
 	DownloadURL  *string      `json:"download_url,omitempty" binding:"required,url"`
 }
 
-func (s *SignRequest) SetUnsignedBucketInfo(bucketName, objectKey string) {
+func (s *SignRequest) SetUnsignedBucketInfo(bucket, key, etag string, size int64) {
 	s.UnsignedFile = &BucketInfo{
-		BucketName: bucketName,
-		ObjectKey:  objectKey,
-		Size:       0,
-		SHA256:     "",
+		Bucket: bucket,
+		Key:    key,
+		ETag:   etag,
+		Size:   size,
 	}
-}
-
-func (s *SignRequest) SetUnsignedBucketInfoShaAndSize(sha256 string, size int64) {
-	if s.UnsignedFile == nil {
-		return
-	}
-	s.UnsignedFile.SHA256 = sha256
-	s.UnsignedFile.Size = size
 }
 
 func (s *SignRequest) SetSignerStatus(step SignerStatus, err *SignerError) {

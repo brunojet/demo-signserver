@@ -39,7 +39,6 @@ func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.Sig
 		return nil, errors.New("erro ao gerar URL pré-assinada")
 	}
 
-	request.SetUnsignedBucketInfo(s.storage.GetBucketName(), ID)
 	request.SetID(ID)
 	err = s.repository.CreateRequest(request)
 
@@ -79,10 +78,10 @@ func (s *RequestService) GetSignerStatusByID(id string) (*domain.SignGetResponse
 }
 
 func (s *RequestService) getPresignedGetUrl(response *domain.SignGetResponse, bucketInfo *domain.BucketInfo) {
-	if response == nil || bucketInfo == nil || bucketInfo.ObjectKey == "" {
+	if response == nil || bucketInfo == nil || bucketInfo.Key == "" {
 		return
 	}
-	url, err := s.storage.GeneratePresignedURL(adapters.HttpMethodGet, bucketInfo.ObjectKey, 15*time.Minute)
+	url, err := s.storage.GeneratePresignedURL(adapters.HttpMethodGet, bucketInfo.Key, 15*time.Minute)
 	if err != nil {
 		return
 	}

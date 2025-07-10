@@ -29,7 +29,7 @@ func TestRequestHistoryEntry(t *testing.T) {
 func TestSignRequest_Fields(t *testing.T) {
 	profileID := "pid"
 	status := SignerStatusSigned
-	file := &BucketInfo{BucketName: "b", ObjectKey: "o", Size: 1, SHA256: "s"}
+	file := &BucketInfo{Bucket: "b", Key: "o", Size: 1, ETag: "s"}
 	hist := []RequestHistoryEntry{{CreatedAt: "1"}}
 	// signer := "" // Remove this line since Signer expects *Signer, not *string
 	sr := &SignRequest{

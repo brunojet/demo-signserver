@@ -15,7 +15,7 @@ var (
 	handlerNameRegex = regexp.MustCompile(`^[a-z][a-z0-9_]{0,99}$`)
 )
 
-type Handler func(ctx context.Context, event any)
+type Handler func(ctx context.Context, event any) error
 
 type HandlerName string
 
@@ -187,10 +187,24 @@ func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName
 				}, "eventbus.handler.panic", map[string]string{"eventType": string(eventType)})
 			}
 		}()
-		b.ObsLogInc("eventbus.handler.success", map[string]interface{}{
+		// Log de entrada
+		b.ObsLogInc("eventbus.handler.start", map[string]interface{}{
 			"eventType": eventType,
-		}, "eventbus.handler.success", map[string]string{"eventType": string(eventType)})
-		w.handler(realCtx, data)
+		}, "eventbus.handler.start", map[string]string{"eventType": string(eventType)})
+
+		err := w.handler(realCtx, data)
+
+		// Log de saída e métrica de sucesso/erro
+		if err != nil {
+			b.ObsLogInc("eventbus.handler.error", map[string]interface{}{
+				"eventType": eventType,
+				"error":     err.Error(),
+			}, "eventbus.handler.error", map[string]string{"eventType": string(eventType)})
+		} else {
+			b.ObsLogInc("eventbus.handler.success", map[string]interface{}{
+				"eventType": eventType,
+			}, "eventbus.handler.success", map[string]string{"eventType": string(eventType)})
+		}
 	})
 	return nil
 }

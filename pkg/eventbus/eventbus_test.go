@@ -46,8 +46,9 @@ func TestRegisterAndPublish(t *testing.T) {
 	bus := NewEventBus()
 	defer bus.Stop()
 	var called bool
-	err := bus.Register("teste", func(ctx context.Context, event any) {
+	err := bus.Register("teste", func(ctx context.Context, event any) error {
 		called = true
+		return nil
 	}, 1, 2)
 	assert.NoError(t, err, "erro ao registrar handler")
 	err = bus.Publish("teste", "payload")
@@ -59,12 +60,13 @@ func TestRegisterAndPublish(t *testing.T) {
 func TestPublishWithContextCancel(t *testing.T) {
 	bus := NewEventBus()
 	ch := make(chan struct{})
-	_ = bus.Register("ctx", func(ctx context.Context, event any) {
+	_ = bus.Register("ctx", func(ctx context.Context, event any) error {
 		select {
 		case <-ctx.Done():
 			ch <- struct{}{}
 		case <-time.After(100 * time.Millisecond):
 		}
+		return nil
 	}, 1, 2)
 	ctx, cancel := context.WithCancel(context.Background())
 	_ = bus.PublishWithContext(ctx, "ctx", nil)
@@ -79,7 +81,7 @@ func TestPublishWithContextCancel(t *testing.T) {
 
 func TestInvalidHandlerName(t *testing.T) {
 	bus := NewEventBus()
-	err := bus.Register("INVALID-NAME", func(ctx context.Context, event any) {}, 1, 2)
+	err := bus.Register("INVALID-NAME", func(ctx context.Context, event any) error { return nil }, 1, 2)
 	assert.Error(t, err, "esperado erro para nome de handler inválido")
 }
 
@@ -87,16 +89,16 @@ func TestInvalidWorkerParams(t *testing.T) {
 	bus := NewEventBus()
 	err := bus.Register("ok", nil, 1, 2)
 	assert.Error(t, err, "esperado erro para handler nil")
-	err = bus.Register("ok", func(ctx context.Context, event any) {}, 0, 2)
+	err = bus.Register("ok", func(ctx context.Context, event any) error { return nil }, 0, 2)
 	assert.Error(t, err, "esperado erro para numWorkers <= 0")
-	err = bus.Register("ok", func(ctx context.Context, event any) {}, 2, 1)
+	err = bus.Register("ok", func(ctx context.Context, event any) error { return nil }, 2, 1)
 	assert.Error(t, err, "esperado erro para queueBacklog < numWorkers")
 }
 
 func TestPanicInHandler(t *testing.T) {
 	sink := newMockMetricsSink()
 	bus := NewEventBusWithSink(sink)
-	_ = bus.Register("panic", func(ctx context.Context, event any) {
+	_ = bus.Register("panic", func(ctx context.Context, event any) error {
 		panic("fail")
 	}, 1, 2)
 	_ = bus.Publish("panic", nil)
@@ -107,7 +109,7 @@ func TestPanicInHandler(t *testing.T) {
 func TestObservabilityIntegration(t *testing.T) {
 	sink := newMockMetricsSink()
 	bus := NewEventBusWithSink(sink)
-	_ = bus.Register("obs", func(ctx context.Context, event any) {}, 1, 2)
+	_ = bus.Register("obs", func(ctx context.Context, event any) error { return nil }, 1, 2)
 	_ = bus.Publish("obs", nil)
 	time.Sleep(20 * time.Millisecond)
 	assert.Equal(t, 1, sink.counts["eventbus.handler.success"], "esperado incremento de métrica de sucesso do handler")
@@ -115,7 +117,7 @@ func TestObservabilityIntegration(t *testing.T) {
 
 func TestUnregisterAndStop(t *testing.T) {
 	bus := NewEventBus()
-	_ = bus.Register("bye", func(ctx context.Context, event any) {}, 1, 2)
+	_ = bus.Register("bye", func(ctx context.Context, event any) error { return nil }, 1, 2)
 	err := bus.Unregister("bye")
 	assert.NoError(t, err, "erro ao remover handler")
 	bus.Stop()
@@ -163,7 +165,7 @@ func TestIsValidHandlerName(t *testing.T) {
 
 func TestIsValidWorkerParams(t *testing.T) {
 	bus := NewEventBus()
-	validHandler := func(ctx context.Context, event any) {}
+	validHandler := func(ctx context.Context, event any) error { return nil }
 	cases := []struct {
 		name         string
 		handler      Handler
@@ -188,16 +190,16 @@ func TestIsValidWorkerParams(t *testing.T) {
 
 func TestRegisterInvalidHandlerName(t *testing.T) {
 	bus := NewEventBus()
-	err := bus.Register("INVALID-NAME", func(ctx context.Context, event any) {}, 1, 2)
+	err := bus.Register("INVALID-NAME", func(ctx context.Context, event any) error { return nil }, 1, 2)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "eventType inválido")
 }
 
 func TestRegisterAlreadyExists(t *testing.T) {
 	bus := NewEventBus()
-	err := bus.Register("duplo", func(ctx context.Context, event any) {}, 1, 2)
+	err := bus.Register("duplo", func(ctx context.Context, event any) error { return nil }, 1, 2)
 	assert.NoError(t, err)
-	err = bus.Register("duplo", func(ctx context.Context, event any) {}, 1, 2)
+	err = bus.Register("duplo", func(ctx context.Context, event any) error { return nil }, 1, 2)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "handler já registrado")
 }
