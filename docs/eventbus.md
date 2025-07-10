@@ -1,62 +1,52 @@
 # EventBus: Arquitetura e Documentação
 
 ## Objetivo
-O `EventBus` é um barramento de eventos local, thread-safe, que permite registrar handlers para diferentes tipos de eventos. Para cada tipo de evento registrado, uma goroutine dedicada é criada para consumir eventos da fila e executar o handler correspondente. O EventBus é desacoplado do mecanismo de fila, usando um adapter (interface) para a fila.
+O `EventBus` é um barramento de eventos thread-safe, observável e robusto, com worker pool, shutdown seguro, rastreio ponta-a-ponta (traceID) e integração com métricas/logs customizados.
 
 ## Estrutura
 
 ```go
-// EventBus mantém o controle dos handlers e goroutines por tipo de evento.
+// EventBus mantém o controle dos handlers e worker pools por tipo de evento.
 type EventBus struct {
-    queueAdapter QueueInterface
-    handlers    map[string]Handler
-    stopChans   map[string]chan struct{}
-    mu          sync.Mutex
+    workers    map[HandlerName]*eventWorker
+    ObsHandler ObservableHandler
+    // ...
 }
 ```
 
-- `queueAdapter`: Adapter para a fila de mensagens (interface).
-- `handlers`: Mapeia eventType para handler.
-- `stopChans`: Mapeia eventType para canal de parada da goroutine.
-- `mu`: Mutex para garantir thread-safety.
+- **workers**: Mapeia eventType para worker pool.
+- **ObsHandler**: Handler de observabilidade (logs, métricas, tracing).
 
-## Métodos
+## Principais Métodos
 
-### Register
-```go
-func (b *EventBus) Register(eventType string, handler Handler)
-```
-Registra um handler para um tipo de evento. Cria uma goroutine dedicada que consome eventos desse tipo da fila e executa o handler.
+- `Register(eventType, handler, numWorkers, backlog)`
+- `Unregister(eventType)`
+- `Publish(eventType, data)`
+- `PublishWithContext(ctx, eventType, data)`
+- `Stop()`
 
-### Unregister
-```go
-func (b *EventBus) Unregister(eventType string)
-```
-Remove o handler e para a goroutine associada ao tipo de evento.
-
-### Stop
-```go
-func (b *EventBus) Stop()
-```
-Para todas as goroutines e encerra o consumo de eventos.
+## Observabilidade
+- Todos os handlers são automaticamente envolvidos por middleware de observabilidade.
+- Cada evento recebe um traceID único propagado em todo o fluxo.
+- Logs estruturados, métricas e tracing distribuído (OpenTelemetry-ready).
 
 ## Exemplo de Uso
-
 ```go
-bus := NewEventBus(queue)
-bus.Register("upload", uploadHandler)
-// ...
-bus.Unregister("upload")
+bus := eventbus.NewEventBus()
+bus.Register("upload_received", handler, 2, 10)
+bus.Publish("upload_received", payload)
+bus.Unregister("upload_received")
 bus.Stop()
 ```
 
-## Vantagens
-- Isolamento por tipo de evento (cada um com sua goroutine)
-- Fácil de registrar/desregistrar handlers dinamicamente
-- Desacoplado do mecanismo de fila (pode ser local, SQS, etc)
-- Thread-safe
+## Fluxograma do ciclo de eventos
+Consulte `docs/fluxogramas.md` para o ciclo de observabilidade do EventBus.
 
-## Possíveis Extensões
-- Suporte a middlewares
-- Retry/backoff por tipo de evento
-- Métricas e logging por handler
+## Vantagens
+- Isolamento por tipo de evento (worker pool)
+- Observabilidade automática
+- Fácil integração com tracing e métricas
+- Thread-safe e robusto
+
+---
+Consulte os testes unitários para exemplos avançados e integração com métricas/logs.

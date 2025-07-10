@@ -40,8 +40,8 @@ func (o *DefaultObservableHandler) HandlerStart(eventType HandlerName) HandlerCt
 	start := time.Now()
 	if o.Obs != nil {
 		observability.LogInfo("eventbus.handler.start", map[string]interface{}{
-			"eventType": eventType,
 			"traceID":   traceID,
+			"eventType": eventType,
 		})
 		o.Obs.Inc("eventbus.handler.start", map[string]string{"eventType": string(eventType), "traceID": traceID})
 	}
@@ -49,8 +49,8 @@ func (o *DefaultObservableHandler) HandlerStart(eventType HandlerName) HandlerCt
 }
 
 func (o *DefaultObservableHandler) HandlerSuccess(ctx HandlerCtx) {
-	duration := time.Since(ctx.Start)
 	if o.Obs != nil {
+		duration := time.Since(ctx.Start)
 		observability.LogInfo("eventbus.handler.success", map[string]interface{}{
 			"eventType":   ctx.EventType,
 			"traceID":     ctx.TraceID,
@@ -61,26 +61,26 @@ func (o *DefaultObservableHandler) HandlerSuccess(ctx HandlerCtx) {
 }
 
 func (o *DefaultObservableHandler) HandlerError(ctx HandlerCtx, err error) {
-	duration := time.Since(ctx.Start)
 	if o.Obs != nil {
+		duration := time.Since(ctx.Start)
 		observability.LogError("eventbus.handler.error", map[string]interface{}{
 			"eventType":   ctx.EventType,
 			"traceID":     ctx.TraceID,
-			"error":       err.Error(),
 			"duration_ms": duration.Milliseconds(),
+			"error":       err.Error(),
 		})
 		o.Obs.Inc("eventbus.handler.error", map[string]string{"eventType": string(ctx.EventType), "traceID": ctx.TraceID})
 	}
 }
 
 func (o *DefaultObservableHandler) HandlerPanic(ctx HandlerCtx, panicVal any) {
-	duration := time.Since(ctx.Start)
 	if o.Obs != nil {
+		duration := time.Since(ctx.Start)
 		observability.LogError("eventbus.handler.panic", map[string]interface{}{
 			"eventType":   ctx.EventType,
 			"traceID":     ctx.TraceID,
-			"panic":       panicVal,
 			"duration_ms": duration.Milliseconds(),
+			"panic":       panicVal,
 		})
 		o.Obs.Inc("eventbus.handler.panic", map[string]string{"eventType": string(ctx.EventType), "traceID": ctx.TraceID})
 	}
@@ -88,21 +88,32 @@ func (o *DefaultObservableHandler) HandlerPanic(ctx HandlerCtx, panicVal any) {
 
 func (o *DefaultObservableHandler) HandlerLogInfo(caller, message string, fields map[string]interface{}) {
 	if o.Obs != nil {
-		fields["caller"] = caller
-		fields["traceID"] = o.TraceID
+		logFields := map[string]interface{}{
+			"caller":  caller,
+			"traceID": o.TraceID,
+		}
+		for k, v := range fields {
+			logFields[k] = v
+		}
 		observability.LogInfo(message, fields)
 	}
 }
 
 func (o *DefaultObservableHandler) HandlerLogError(caller, method string, err error, fields map[string]interface{}) {
 	if o.Obs != nil {
-		fields["traceID"] = o.TraceID
-		fields["caller"] = caller
-		fields["method"] = method
-		fields["error"] = err.Error()
-		observability.LogError(fmt.Sprintf("falha em %s", method), fields)
+		logFields := map[string]interface{}{
+			"caller":  caller,
+			"traceID": o.TraceID,
+			"method":  method,
+			"error":   err.Error(),
+		}
+		for k, v := range fields {
+			logFields[k] = v
+		}
+		observability.LogError(fmt.Sprintf("falha em %s", method), logFields)
 	}
 }
+
 func generateTraceID() string {
 	return uuid.NewString()
 }
