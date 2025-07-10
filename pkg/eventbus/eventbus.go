@@ -41,12 +41,11 @@ func NewEventBus() *EventBus {
 
 // NewEventBus permite injetar um MetricsSink customizado para métricas e logs.
 func NewEventBusWithSink(sink observability.MetricsSink) *EventBus {
-	var obs *observability.MetricsService
-	if sink != nil {
-		obs = observability.NewMetricsService(sink)
-	}
 	eventBus := NewEventBus()
-	eventBus.ObsHandler = NewDefaultObservableHandler(obs)
+	if sink != nil {
+		obs := observability.NewMetricsService(sink)
+		eventBus.ObsHandler = NewDefaultObservableHandler(obs)
+	}
 	return eventBus
 }
 
@@ -62,9 +61,8 @@ func (b *EventBus) getOrErrorWorker(caller string, eventType HandlerName) (*even
 	w, ok := b.getWorker(eventType)
 	if !ok {
 		err := fmt.Errorf("handler não registrado para o tipo de evento: %s", eventType)
-		b.ObsHandler.HandlerLog(caller, err.Error(), map[string]interface{}{
+		b.ObsHandler.HandlerLogError(caller, "getOrErrorWorker", err, map[string]interface{}{
 			"eventType": eventType,
-			"error":     err.Error(),
 		})
 		return nil, err
 	}
@@ -72,15 +70,14 @@ func (b *EventBus) getOrErrorWorker(caller string, eventType HandlerName) (*even
 }
 
 func (b *EventBus) getIfExistsWorker(caller string, eventType HandlerName) error {
-	if err := b.isValidHandlerName(caller, "falha"); err != nil {
+	if err := b.isValidHandlerName(caller, eventType); err != nil {
 		return err
 	}
 	_, ok := b.getWorker(eventType)
 	if ok {
 		err := fmt.Errorf("handler já registrado para o tipo de evento: %s", eventType)
-		b.ObsHandler.HandlerLog(caller, err.Error(), map[string]interface{}{
+		b.ObsHandler.HandlerLogError(caller, "getIfExistsWorker", err, map[string]interface{}{
 			"eventType": eventType,
-			"error":     err.Error(),
 		})
 		return err
 	}
@@ -90,9 +87,8 @@ func (b *EventBus) getIfExistsWorker(caller string, eventType HandlerName) error
 func (b *EventBus) isValidHandlerName(caller string, eventType HandlerName) error {
 	if !handlerNameRegex.MatchString(string(eventType)) {
 		err := fmt.Errorf("eventType inválido: deve começar com letra minúscula, conter apenas letras minúsculas, números ou sublinhado, e ter até 100 caracteres")
-		b.ObsHandler.HandlerLog(caller, "falha", map[string]interface{}{
+		b.ObsHandler.HandlerLogError(caller, "isValidHandlerName", err, map[string]interface{}{
 			"eventType": eventType,
-			"error":     err.Error(),
 		})
 		return err
 	}
@@ -100,22 +96,22 @@ func (b *EventBus) isValidHandlerName(caller string, eventType HandlerName) erro
 }
 
 func (b *EventBus) isValidWorkerParams(caller string, handler Handler, numWorkers int, queueBacklog int) error {
+	var err error = nil
 	if handler == nil {
-		err := fmt.Errorf("handler não pode ser nil")
-		b.ObsHandler.HandlerLog(caller, "falha", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return err
+		err = fmt.Errorf("handler não pode ser nil")
 	}
 
-	if numWorkers < 1 || queueBacklog < numWorkers {
-		err := fmt.Errorf("numWorkers deve ser > 0 e queueBacklog >= numWorkers")
-		b.ObsHandler.HandlerLog(caller, "falha", map[string]interface{}{
-			"error":        err.Error(),
+	if err == nil && (numWorkers < 1 || queueBacklog < numWorkers) {
+		err = fmt.Errorf("numWorkers deve ser > 0 e queueBacklog >= numWorkers")
+	}
+
+	if err != nil {
+		b.ObsHandler.HandlerLogError(caller, "isValidWorkerParams", err, map[string]interface{}{
+			"handler":      handler,
 			"numWorkers":   numWorkers,
 			"queueBacklog": queueBacklog,
 		})
-		return err
+
 	}
 
 	return nil
@@ -153,7 +149,7 @@ func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers i
 	pool := workerpool.New(numWorkers, queueBacklog)
 	pool.Start()
 	b.workers[eventType] = &eventWorker{pool: pool, handler: wrappedHandler}
-	b.ObsHandler.HandlerLog("eventbus.register", "registrado com sucesso", map[string]interface{}{
+	b.ObsHandler.HandlerLogInfo("eventbus.register", "registrado com sucesso", map[string]interface{}{
 		"eventType":    eventType,
 		"numWorkers":   numWorkers,
 		"queueBacklog": queueBacklog,
@@ -171,7 +167,7 @@ func (b *EventBus) Unregister(eventType HandlerName) error {
 	}
 	w.pool.Stop()
 	delete(b.workers, eventType)
-	b.ObsHandler.HandlerLog("eventbus.unregister", "registro finalizado com sucesso", map[string]interface{}{
+	b.ObsHandler.HandlerLogInfo("eventbus.unregister", "registro finalizado com sucesso", map[string]interface{}{
 		"eventType": eventType,
 	})
 	return nil
@@ -205,7 +201,7 @@ func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName
 		}()
 		err = w.handler(realCtx, data)
 	})
-	b.ObsHandler.HandlerLog("eventbus.publish_with_context", "evento publicado com sucesso", map[string]interface{}{
+	b.ObsHandler.HandlerLogInfo("eventbus.publish_with_context", "evento publicado com sucesso", map[string]interface{}{
 		"eventType": eventType,
 	})
 	return nil

@@ -6,11 +6,10 @@ import (
 	"time"
 )
 
-// LogInfo registra logs de informação no padrão observabilidade
-func LogInfo(msg string, fields map[string]interface{}) {
+func logInternal(level, msg string, fields map[string]interface{}) {
 	logEntry := map[string]interface{}{
 		"timestamp": time.Now().Format(time.RFC3339),
-		"level":     "info",
+		"level":     level,
 		"msg":       msg,
 	}
 	for k, v := range fields {
@@ -18,4 +17,13 @@ func LogInfo(msg string, fields map[string]interface{}) {
 	}
 	jsonLog, _ := json.Marshal(logEntry)
 	log.Println(string(jsonLog))
+}
+
+// LogInfo registra logs de informação no padrão observabilidade
+func LogInfo(msg string, fields map[string]interface{}) {
+	logInternal("info", msg, fields)
+}
+
+func LogError(msg string, fields map[string]interface{}) {
+	logInternal("error", msg, fields)
 }

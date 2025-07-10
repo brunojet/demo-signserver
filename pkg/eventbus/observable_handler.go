@@ -2,6 +2,7 @@ package eventbus
 
 import (
 	"demo-signserver/pkg/observability"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,7 +19,8 @@ type ObservableHandler interface {
 	HandlerSuccess(ctx HandlerCtx)
 	HandlerError(ctx HandlerCtx, err error)
 	HandlerPanic(ctx HandlerCtx, panicVal any)
-	HandlerLog(caller, message string, fields map[string]interface{})
+	HandlerLogInfo(caller, message string, fields map[string]interface{})
+	HandlerLogError(caller, method string, err error, fields map[string]interface{})
 }
 
 type DefaultObservableHandler struct {
@@ -61,7 +63,7 @@ func (o *DefaultObservableHandler) HandlerSuccess(ctx HandlerCtx) {
 func (o *DefaultObservableHandler) HandlerError(ctx HandlerCtx, err error) {
 	duration := time.Since(ctx.Start)
 	if o.Obs != nil {
-		observability.LogInfo("eventbus.handler.error", map[string]interface{}{
+		observability.LogError("eventbus.handler.error", map[string]interface{}{
 			"eventType":   ctx.EventType,
 			"traceID":     ctx.TraceID,
 			"error":       err.Error(),
@@ -74,7 +76,7 @@ func (o *DefaultObservableHandler) HandlerError(ctx HandlerCtx, err error) {
 func (o *DefaultObservableHandler) HandlerPanic(ctx HandlerCtx, panicVal any) {
 	duration := time.Since(ctx.Start)
 	if o.Obs != nil {
-		observability.LogInfo("eventbus.handler.panic", map[string]interface{}{
+		observability.LogError("eventbus.handler.panic", map[string]interface{}{
 			"eventType":   ctx.EventType,
 			"traceID":     ctx.TraceID,
 			"panic":       panicVal,
@@ -84,7 +86,7 @@ func (o *DefaultObservableHandler) HandlerPanic(ctx HandlerCtx, panicVal any) {
 	}
 }
 
-func (o *DefaultObservableHandler) HandlerLog(caller, message string, fields map[string]interface{}) {
+func (o *DefaultObservableHandler) HandlerLogInfo(caller, message string, fields map[string]interface{}) {
 	if o.Obs != nil {
 		fields["caller"] = caller
 		fields["traceID"] = o.TraceID
@@ -92,6 +94,15 @@ func (o *DefaultObservableHandler) HandlerLog(caller, message string, fields map
 	}
 }
 
+func (o *DefaultObservableHandler) HandlerLogError(caller, method string, err error, fields map[string]interface{}) {
+	if o.Obs != nil {
+		fields["traceID"] = o.TraceID
+		fields["caller"] = caller
+		fields["method"] = method
+		fields["error"] = err.Error()
+		observability.LogError(fmt.Sprintf("falha em %s", method), fields)
+	}
+}
 func generateTraceID() string {
 	return uuid.NewString()
 }
