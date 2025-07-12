@@ -56,11 +56,10 @@ type SignRequest struct {
 }
 
 type SignRequestResponse struct {
-	ID           *string       `json:"id,omitempty" binding:"required"`
-	SignerStatus *SignerStatus `json:"status,omitempty" binding:"required"`
-	SignerError  *SignerError  `json:"error,omitempty"`
-	HttpMethod   *HttpMethod   `json:"method,omitempty" binding:"required,oneof=PUT"`
-	UploadURL    *string       `json:"upload_url,omitempty" binding:"required,url"`
+	ID           string       `json:"id,omitempty" binding:"required"`
+	SignerStatus SignerStatus `json:"status,omitempty" binding:"required"`
+	HttpMethod   HttpMethod   `json:"method,omitempty" binding:"required,oneof=PUT"`
+	UploadURL    string       `json:"upload_url,omitempty" binding:"required,url"`
 }
 
 type SignGetResponse struct {

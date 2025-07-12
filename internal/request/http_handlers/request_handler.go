@@ -27,14 +27,14 @@ func (h *RequestHandler) CreateRequest(c *gin.Context) {
 	domain := dto.GetDomainCreateSignRequest()
 	response, err := h.Service.CreateRequest(domain)
 	if err != nil {
-		httpStatus := http.StatusInternalServerError
-		if contains(response.SignerError.Message, "Erro ao buscar item com ID") {
-			httpStatus = http.StatusConflict
+		if contains(err.Error(), "Erro ao buscar item com ID") {
+			c.JSON(http.StatusPreconditionFailed, gin.H{"error": err.Error()})
+			return
 		}
-		c.JSON(httpStatus, response)
+		c.JSON(http.StatusInternalServerError, response)
 		return
 	}
-	c.Header("Location", "/requests/"+*response.ID)
+	c.Header("Location", "/requests/"+response.ID)
 	c.JSON(http.StatusCreated, response)
 }
 

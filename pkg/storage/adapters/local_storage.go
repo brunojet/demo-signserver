@@ -5,8 +5,8 @@ import (
 	"demo-signserver/pkg/storage"
 	"fmt"
 	"io"
-	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 )
@@ -19,8 +19,11 @@ type LocalStorageService struct {
 
 func NewLocalStorageService() storage.StorageAdapter {
 	workPath := filepath.Join(os.TempDir(), "local_storage_service")
+	if _, err := os.Stat(workPath); !os.IsNotExist(err) {
+		os.Remove(workPath)
+	}
 	if err := os.MkdirAll(filepath.Dir(workPath), 0755); err != nil {
-		log.Fatalf("Erro ao criar diretório de trabalho: %v\n", err)
+		panic(fmt.Sprintf("Erro ao criar diretório de trabalho: %v\n", err))
 	}
 
 	return &LocalStorageService{
@@ -29,7 +32,7 @@ func NewLocalStorageService() storage.StorageAdapter {
 }
 
 func (l *LocalStorageService) GeneratePresignedURL(httpMethod storage.HttpMethod, fileInfo *storage.FileInfo, expires time.Duration) (string, error) {
-	return "https://example.com/" + fileInfo.FilePath, nil
+	return path.Join("https://example.com", filepath.ToSlash(fileInfo.FilePath)), nil
 }
 
 func (l *LocalStorageService) DownloadFileFromS3(fileInfo *storage.FileInfo) error {

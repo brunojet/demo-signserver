@@ -5,8 +5,6 @@ import (
 	"demo-signserver/internal/repository/domain"
 	"demo-signserver/internal/repository/repositories"
 	"demo-signserver/pkg/storage"
-	"errors"
-	"fmt"
 	"path/filepath"
 	"time"
 
@@ -28,31 +26,12 @@ func NewRequestService() *RequestService {
 }
 
 func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.SignRequestResponse, error) {
-	var (
-		err      error
-		step     = "init"
-		response = &domain.SignRequestResponse{}
-	)
 
-	defer func() {
-		if r := recover(); r != nil {
-			err = errors.New("panic recovered: " + r.(string))
-		}
-		if err != nil {
-			signerStatus := domain.SignerStatusSigningFailed
-			response.SignerStatus = &signerStatus
-			response.SignerError = &domain.SignerError{
-				Location: fmt.Sprintf("CreateRequest step: %v", step),
-				Message:  err.Error(),
-			}
-		}
-	}()
-
-	step = "get_profile"
 	profileRepo := repositories.NewProfileRepository()
-	_, err = profileRepo.GetProfileByID(*request.SignerProfileId)
+	_, err := profileRepo.GetProfileByID(*request.SignerProfileId)
+
 	if err != nil {
-		return response, err
+		return nil, err
 	}
 
 	request.SetID(uuid.New().String())
@@ -67,27 +46,24 @@ func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.Sig
 		FilePath:    filepath.Join("signed", request.ID),
 	}
 
-	step = "generate_presigned_put_url"
 	url, err := s.generatePresignedPutURL(request.UnsignedFile)
 
 	if err != nil {
-		return response, err
+		return nil, err
 	}
 
-	step = "create_request"
 	err = s.repository.CreateRequest(request)
 
 	if err != nil {
-		return response, err
+		return nil, err
 	}
 
-	response.ID = &request.ID
-	response.SignerStatus = request.SignerStatus
-	httpMethod := domain.HttpMethodPut
-	response.HttpMethod = &httpMethod
-	response.UploadURL = &url
-
-	return response, nil
+	return &domain.SignRequestResponse{
+		ID:           request.ID,
+		SignerStatus: *request.SignerStatus,
+		HttpMethod:   domain.HttpMethodPut,
+		UploadURL:    url,
+	}, nil
 }
 
 func (s *RequestService) GetRequestByID(id string) (*domain.SignRequest, error) {
@@ -119,8 +95,8 @@ func (s *RequestService) getPresignedGetUrl(response *domain.SignGetResponse, fi
 		return
 	}
 	httpMethod := domain.HttpMethodGet
-	response.HttpMethod = &httpMethod
-	response.DownloadURL = &url
+	response.HttpMethod = httpMethod
+	response.DownloadURL = url
 }
 
 func (s *RequestService) generatePresignedPutURL(fileInfo *storage.FileInfo) (string, error) {
