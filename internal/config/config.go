@@ -2,12 +2,14 @@ package config
 
 import (
 	"context"
+	http_client "demo-signserver/pkg/http/client"
+	http_client_adapters "demo-signserver/pkg/http/client/adapters"
 	message_adapters "demo-signserver/pkg/message/adapters"
 	"demo-signserver/pkg/observability"
 	db_services "demo-signserver/pkg/repository/services"
+	"demo-signserver/pkg/storage"
 	storage_adapters "demo-signserver/pkg/storage/adapters"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 
@@ -22,10 +24,11 @@ var (
 )
 
 type SignServerMethods struct {
-	NewStorageService      func(bucketName string) storage_adapters.StorageServiceInterface
+	NewStorageService      func() storage.StorageAdapter
 	NewDynamoDBService     func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService
 	NewMessageQueueAdapter func(unsignedDir, bucket string) message_adapters.MessageQueueAdapterInterface
 	NewEventBus            func() *eventbus.EventBus
+	NewHttpClient          func() http_client.HttpClientAdapter
 }
 
 type SignServerConfig struct {
@@ -37,7 +40,7 @@ type SignServerConfig struct {
 func OsGetenvPanic(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
-		log.Fatalf("Environment variable %s is not set", key)
+		panic(fmt.Sprintf("Environment variable %s is not set", key))
 	}
 	return value
 }
@@ -79,15 +82,25 @@ func GetSignServerMethods() *SignServerMethods {
 			NewEventBus: func() *eventbus.EventBus {
 				return eventbus.NewEventBusWithSink(sink)
 			},
-			NewStorageService: func(bucketName string) storage_adapters.StorageServiceInterface {
+			NewStorageService: func() storage.StorageAdapter {
 				if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
-					return storage_adapters.NewLocalStorageService(bucketName)
-				} else {
-					return storage_adapters.NewS3Service(bucketName)
+					adapter := storage_adapters.NewLocalStorageService()
+					return storage.NewStorageService(adapter)
 				}
+
+				panic("Storage service not implemented for non-local environments")
 			},
 			NewDynamoDBService: func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService {
 				return db_services.NewDynamoDBService(tableName, pkKey, skKey)
+			},
+			NewHttpClient: func() http_client.HttpClientAdapter {
+				var adapter http_client.HttpClientAdapter
+				if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
+					adapter = http_client_adapters.NewFileHttpClientAdapter()
+				} else {
+					adapter = http_client_adapters.NewHttpClientAdapter()
+				}
+				return http_client.NewHttpClient(adapter)
 			},
 		}
 	})

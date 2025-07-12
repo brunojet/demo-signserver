@@ -2,16 +2,9 @@ package domain
 
 import (
 	"demo-signserver/pkg/repository/domain"
+	"demo-signserver/pkg/storage"
 	"time"
 )
-
-// BucketInfo representa informações de um arquivo em um bucket.
-type BucketInfo struct {
-	Bucket string `dynamodbav:"bucket_name"`
-	Key    string `dynamodbav:"object_key"`
-	Size   int64  `dynamodbav:"size"`
-	ETag   string `dynamodbav:"sha256"`
-}
 
 // SignerStatus representa os possíveis passos do fluxo de assinatura.
 type SignerStatus string
@@ -21,6 +14,7 @@ const (
 	SignerStatusUploaded          SignerStatus = "uploaded"
 	SignerStatusSigning           SignerStatus = "signing"
 	SignerStatusSigned            SignerStatus = "signed"
+	SignerStatusSignedAvailable   SignerStatus = "signed_available"
 	SignerStatusDownloadRequested SignerStatus = "download_requested"
 	SignerStatusSigningFailed     SignerStatus = "signing_failed"
 )
@@ -34,8 +28,8 @@ const (
 
 // SignerError representa um erro ocorrido em um passo do fluxo.
 type SignerError struct {
-	Code    string `json:"code" dynamodbav:"code"`
-	Message string `json:"message" dynamodbav:"message"`
+	Location string `json:"code" dynamodbav:"location"`
+	Message  string `json:"message" dynamodbav:"message"`
 }
 
 // IntentHistoryEntry representa um registro de histórico de um passo do fluxo.
@@ -55,18 +49,18 @@ type SignRequest struct {
 	domain.BaseDomain
 	SignerProfileId *string                `json:"profile_id,omitempty" dynamodbav:"signer_profile_id,omitempty"`
 	SignerStatus    *SignerStatus          `json:"status,omitempty" dynamodbav:"status,omitempty"`
-	UnsignedFile    *BucketInfo            `json:"unsigned_file,omitempty" dynamodbav:"unsigned_file,omitempty"`
-	SignedFile      *BucketInfo            `json:"signed_file,omitempty" dynamodbav:"signed_file,omitempty"`
+	UnsignedFile    *storage.FileInfo      `json:"unsigned_file,omitempty" dynamodbav:"unsigned_file,omitempty"`
+	SignedFile      *storage.FileInfo      `json:"signed_file,omitempty" dynamodbav:"signed_file,omitempty"`
 	WebhookURL      *string                `json:"webhook_url,omitempty" dynamodbav:"webhook_url,omitempty"`
 	History         *[]RequestHistoryEntry `json:"history,omitempty" dynamodbav:"history,omitempty"`
 }
 
 type SignRequestResponse struct {
-	ID           string       `json:"id" binding:"required"`
-	SignerStatus SignerStatus `json:"status,omitempty" binding:"required"`
-	SignerError  *SignerError `json:"error,omitempty"`
-	HttpMethod   HttpMethod   `json:"method" binding:"required,oneof=PUT"`
-	UploadURL    string       `json:"upload_url" binding:"required,url"`
+	ID           *string       `json:"id,omitempty" binding:"required"`
+	SignerStatus *SignerStatus `json:"status,omitempty" binding:"required"`
+	SignerError  *SignerError  `json:"error,omitempty"`
+	HttpMethod   *HttpMethod   `json:"method,omitempty" binding:"required,oneof=PUT"`
+	UploadURL    *string       `json:"upload_url,omitempty" binding:"required,url"`
 }
 
 type SignGetResponse struct {
@@ -75,15 +69,6 @@ type SignGetResponse struct {
 	SignerError  *SignerError `json:"error,omitempty"`
 	HttpMethod   *HttpMethod  `json:"method,omitempty" binding:"required,oneof=GET"`
 	DownloadURL  *string      `json:"download_url,omitempty" binding:"required,url"`
-}
-
-func (s *SignRequest) SetUnsignedBucketInfo(bucket, key, etag string, size int64) {
-	s.UnsignedFile = &BucketInfo{
-		Bucket: bucket,
-		Key:    key,
-		ETag:   etag,
-		Size:   size,
-	}
 }
 
 func (s *SignRequest) SetSignerStatus(step SignerStatus, err *SignerError) {

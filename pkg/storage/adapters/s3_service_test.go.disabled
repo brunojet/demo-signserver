@@ -74,7 +74,7 @@ func TestNewS3Service_Success(t *testing.T) {
 	assert.NotNil(t, svc)
 	s3svc, ok := svc.(*S3Service)
 	assert.True(t, ok)
-	assert.Equal(t, "bucket", s3svc.Bucket)
+	assert.Equal(t, "bucket", s3svc.GetStoragePath())
 }
 
 func TestNewS3Service_Error(t *testing.T) {

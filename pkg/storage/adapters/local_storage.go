@@ -1,6 +1,8 @@
 package adapters
 
 import (
+	"crypto/md5"
+	"demo-signserver/pkg/storage"
 	"fmt"
 	"io"
 	"log"
@@ -9,41 +11,30 @@ import (
 	"time"
 )
 
-var _ StorageServiceInterface = (*LocalStorageService)(nil)
+var _ storage.StorageAdapter = (*LocalStorageService)(nil)
 
-// LocalStorageService simula operações de storage em disco local, compatível com S3ServiceInterface
-// e métodos DownloadFile/UploadFile.
 type LocalStorageService struct {
-	BasePath string // diretório base simulando o bucket
-	WorkPath string // caminho de trabalho opcional, se necessário
+	WorkPath string
 }
 
-func NewLocalStorageService(basePath string) StorageServiceInterface {
-	basePath = filepath.Join(os.TempDir(), basePath)
-	workPath := filepath.Join(basePath, "work") // exemplo de caminho de trabalho
+func NewLocalStorageService() storage.StorageAdapter {
+	workPath := filepath.Join(os.TempDir(), "local_storage_service")
 	if err := os.MkdirAll(filepath.Dir(workPath), 0755); err != nil {
 		log.Fatalf("Erro ao criar diretório de trabalho: %v\n", err)
 	}
 
 	return &LocalStorageService{
-		BasePath: basePath,
 		WorkPath: workPath,
 	}
 }
 
-// GetBucketName implements StorageServiceInterface.
-func (l *LocalStorageService) GetBucketName() string {
-	return l.BasePath
+func (l *LocalStorageService) GeneratePresignedURL(httpMethod storage.HttpMethod, fileInfo *storage.FileInfo, expires time.Duration) (string, error) {
+	return "https://example.com/" + fileInfo.FilePath, nil
 }
 
-// GeneratePresignedGetURL implements storage_services.StorageServiceInterface.
-func (l *LocalStorageService) GeneratePresignedURL(httpMethod HttpMethod, key string, expires time.Duration) (string, error) {
-	panic("unimplemented")
-}
-
-func (l *LocalStorageService) DownloadFileFromS3(key string) error {
-	srcPath := filepath.Join(l.BasePath, key)
-	dstPath := filepath.Join(l.WorkPath, key)
+func (l *LocalStorageService) DownloadFileFromS3(fileInfo *storage.FileInfo) error {
+	srcPath := filepath.Join(fileInfo.StoragePath, fileInfo.FilePath)
+	dstPath := filepath.Join(l.WorkPath, fileInfo.FilePath)
 	in, err := os.Open(srcPath)
 	if err != nil {
 		return fmt.Errorf("erro ao abrir arquivo local: %w", err)
@@ -60,13 +51,23 @@ func (l *LocalStorageService) DownloadFileFromS3(key string) error {
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, in)
-	return err
+	hash := md5.New()
+	mw := io.MultiWriter(out, hash)
+	size, err := io.Copy(mw, in)
+	if err != nil {
+		return fmt.Errorf("erro ao copiar arquivo: %w", err)
+	}
+
+	fileInfo.Hash = fmt.Sprintf("%x", hash.Sum(nil))
+	fileInfo.Size = size
+	fileInfo.State = storage.FileStateReady
+
+	return nil
 }
 
-func (l *LocalStorageService) UploadToS3(key string) error {
-	srcPath := filepath.Join(l.WorkPath, key)
-	dstPath := filepath.Join(l.BasePath, key)
+func (l *LocalStorageService) UploadToS3(fileInfo *storage.FileInfo) error {
+	srcPath := filepath.Join(l.WorkPath, fileInfo.FilePath)
+	dstPath := filepath.Join(fileInfo.StoragePath, fileInfo.FilePath)
 
 	in, err := os.Open(srcPath)
 	if err != nil {
@@ -87,8 +88,7 @@ func (l *LocalStorageService) UploadToS3(key string) error {
 	return err
 }
 
-// OpenWorkFile implements StorageServiceInterface.
-func (l *LocalStorageService) OpenWorkFile(key string) (io.ReadWriteCloser, error) {
-	workFilePath := filepath.Join(l.WorkPath, key)
-	return os.Open(workFilePath)
+// GetWorkFilePath implements StorageServiceInterface.
+func (l *LocalStorageService) GetWorkFilePath(fileInfo *storage.FileInfo) string {
+	return filepath.Join(l.WorkPath, fileInfo.FilePath)
 }

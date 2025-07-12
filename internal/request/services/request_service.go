@@ -4,8 +4,9 @@ import (
 	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
 	"demo-signserver/internal/repository/repositories"
-	"demo-signserver/pkg/storage/adapters"
+	"demo-signserver/pkg/storage"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -13,48 +14,80 @@ import (
 )
 
 type RequestService struct {
-	repository *repositories.RequestRepository
-	storage    adapters.StorageServiceInterface
+	repository  *repositories.RequestRepository
+	storage     storage.StorageAdapter
+	storagePath string
 }
 
 func NewRequestService() *RequestService {
 	cfg := config.GetSignServerConfig()
 	methods := config.GetSignServerMethods()
-	storage := methods.NewStorageService(cfg.StorageBucketName)
+	storage := methods.NewStorageService()
 	repository := repositories.NewRequestRepository()
-	return &RequestService{repository: repository, storage: storage}
+	return &RequestService{repository: repository, storage: storage, storagePath: cfg.StorageBucketName}
 }
 
 func (s *RequestService) CreateRequest(request *domain.SignRequest) (*domain.SignRequestResponse, error) {
-	cfg := config.GetSignServerConfig()
-	profileRepo := repositories.NewProfileRepository(cfg.ProfileTableName)
-	profile, err := profileRepo.GetProfileByID(*request.SignerProfileId)
-	if err != nil || profile == nil {
-		return nil, errors.New("profile_id não encontrado")
+	var (
+		err      error
+		step     = "init"
+		response = &domain.SignRequestResponse{}
+	)
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("panic recovered: " + r.(string))
+		}
+		if err != nil {
+			signerStatus := domain.SignerStatusSigningFailed
+			response.SignerStatus = &signerStatus
+			response.SignerError = &domain.SignerError{
+				Location: fmt.Sprintf("CreateRequest step: %v", step),
+				Message:  err.Error(),
+			}
+		}
+	}()
+
+	step = "get_profile"
+	profileRepo := repositories.NewProfileRepository()
+	_, err = profileRepo.GetProfileByID(*request.SignerProfileId)
+	if err != nil {
+		return response, err
 	}
 
-	ID, url, err := s.generatePresignedPutURL()
+	request.SetID(uuid.New().String())
 
-	if err != nil || ID == "" {
-		return nil, errors.New("erro ao gerar URL pré-assinada")
+	request.UnsignedFile = &storage.FileInfo{
+		StoragePath: s.storagePath,
+		FilePath:    filepath.Join("unsigned", request.ID),
 	}
 
-	request.SetID(ID)
+	request.SignedFile = &storage.FileInfo{
+		StoragePath: s.storagePath,
+		FilePath:    filepath.Join("signed", request.ID),
+	}
+
+	step = "generate_presigned_put_url"
+	url, err := s.generatePresignedPutURL(request.UnsignedFile)
+
+	if err != nil {
+		return response, err
+	}
+
+	step = "create_request"
 	err = s.repository.CreateRequest(request)
 
 	if err != nil {
-		return nil, err
+		return response, err
 	}
 
-	response := &domain.SignRequestResponse{
-		ID:           ID,
-		SignerStatus: *request.SignerStatus,
-		SignerError:  request.GetLastError(),
-		HttpMethod:   domain.HttpMethodPut,
-		UploadURL:    url,
-	}
+	response.ID = &request.ID
+	response.SignerStatus = request.SignerStatus
+	httpMethod := domain.HttpMethodPut
+	response.HttpMethod = &httpMethod
+	response.UploadURL = &url
 
-	return response, err
+	return response, nil
 }
 
 func (s *RequestService) GetRequestByID(id string) (*domain.SignRequest, error) {
@@ -77,11 +110,11 @@ func (s *RequestService) GetSignerStatusByID(id string) (*domain.SignGetResponse
 	return response, err
 }
 
-func (s *RequestService) getPresignedGetUrl(response *domain.SignGetResponse, bucketInfo *domain.BucketInfo) {
-	if response == nil || bucketInfo == nil || bucketInfo.Key == "" {
+func (s *RequestService) getPresignedGetUrl(response *domain.SignGetResponse, fileInfo *storage.FileInfo) {
+	if response == nil {
 		return
 	}
-	url, err := s.storage.GeneratePresignedURL(adapters.HttpMethodGet, bucketInfo.Key, 15*time.Minute)
+	url, err := s.storage.GeneratePresignedURL(storage.HttpMethodGet, fileInfo, 15*time.Minute)
 	if err != nil {
 		return
 	}
@@ -90,12 +123,10 @@ func (s *RequestService) getPresignedGetUrl(response *domain.SignGetResponse, bu
 	response.DownloadURL = &url
 }
 
-// Gera um nome de arquivo único, gera URL pré-assinada e retorna (nome, url, erro)
-func (s *RequestService) generatePresignedPutURL() (string, string, error) {
-	fileName := uuid.New().String()
-	url, err := s.storage.GeneratePresignedURL(adapters.HttpMethodPut, filepath.Join("unsigned", fileName), 15*time.Minute)
+func (s *RequestService) generatePresignedPutURL(fileInfo *storage.FileInfo) (string, error) {
+	url, err := s.storage.GeneratePresignedURL(storage.HttpMethodPut, fileInfo, 15*time.Minute)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-	return fileName, url, nil
+	return url, nil
 }

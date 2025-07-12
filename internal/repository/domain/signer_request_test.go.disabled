@@ -9,8 +9,8 @@ import (
 )
 
 func TestSignerError(t *testing.T) {
-	err := &SignerError{Code: "E1", Message: "msg"}
-	assert.Equal(t, "E1", err.Code)
+	err := &SignerError{Location: "E1", Message: "msg"}
+	assert.Equal(t, "E1", err.Location)
 	assert.Equal(t, "msg", err.Message)
 }
 
@@ -19,17 +19,17 @@ func TestRequestHistoryEntry(t *testing.T) {
 	hist := RequestHistoryEntry{
 		CreatedAt:    "123456",
 		SignerStatus: &step,
-		Error:        &SignerError{Code: "E2", Message: "fail"},
+		Error:        &SignerError{Location: "E2", Message: "fail"},
 	}
 	assert.Equal(t, "123456", hist.CreatedAt)
 	assert.Equal(t, SignerStatusCreated, *hist.SignerStatus)
-	assert.Equal(t, "E2", hist.Error.Code)
+	assert.Equal(t, "E2", hist.Error.Location)
 }
 
 func TestSignRequest_Fields(t *testing.T) {
 	profileID := "pid"
 	status := SignerStatusSigned
-	file := &BucketInfo{Bucket: "b", Key: "o", Size: 1, ETag: "s"}
+	file := &FileInfo{StoragePath: "b", FilePath: "o", Size: 1, Hash: "s"}
 	hist := []RequestHistoryEntry{{CreatedAt: "1"}}
 	// signer := "" // Remove this line since Signer expects *Signer, not *string
 	sr := &SignRequest{
@@ -53,7 +53,7 @@ func TestSignRequest_Fields(t *testing.T) {
 func TestSignRequest_SetSignerStatus_NewHistoryAndStatus(t *testing.T) {
 	sr := &SignRequest{}
 	step := SignerStatusSigning
-	err := SignerError{Code: "E3", Message: "error msg"}
+	err := SignerError{Location: "E3", Message: "error msg"}
 
 	sr.SetSignerStatus(step, &err)
 
@@ -63,18 +63,18 @@ func TestSignRequest_SetSignerStatus_NewHistoryAndStatus(t *testing.T) {
 	assert.Equal(t, 1, len(*sr.History))
 	last := (*sr.History)[0]
 	assert.Equal(t, step, *last.SignerStatus)
-	assert.Equal(t, err.Code, last.Error.Code)
+	assert.Equal(t, err.Location, last.Error.Location)
 	assert.Equal(t, err.Message, last.Error.Message)
 }
 
 func TestSignRequest_SetSignerStatus_AppendHistory(t *testing.T) {
 	sr := &SignRequest{}
 	firstStep := SignerStatusCreated
-	firstErr := SignerError{Code: "E1", Message: "msg1"}
+	firstErr := SignerError{Location: "E1", Message: "msg1"}
 	sr.SetSignerStatus(firstStep, &firstErr)
 
 	secondStep := SignerStatusSigned
-	secondErr := SignerError{Code: "E2", Message: "msg2"}
+	secondErr := SignerError{Location: "E2", Message: "msg2"}
 	sr.SetSignerStatus(secondStep, &secondErr)
 
 	assert.NotNil(t, sr.SignerStatus)
@@ -83,14 +83,14 @@ func TestSignRequest_SetSignerStatus_AppendHistory(t *testing.T) {
 	assert.Equal(t, 2, len(*sr.History))
 	last := (*sr.History)[1]
 	assert.Equal(t, secondStep, *last.SignerStatus)
-	assert.Equal(t, secondErr.Code, last.Error.Code)
+	assert.Equal(t, secondErr.Location, last.Error.Location)
 	assert.Equal(t, secondErr.Message, last.Error.Message)
 }
 
 func TestSignRequest_GetLastError(t *testing.T) {
 	errMsg := "erro de assinatura"
 	errCode := "E123"
-	err := &SignerError{Code: errCode, Message: errMsg}
+	err := &SignerError{Location: errCode, Message: errMsg}
 	stepOk := SignerStatusSigned
 	stepFail := SignerStatusSigningFailed
 

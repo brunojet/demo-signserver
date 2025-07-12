@@ -1,7 +1,6 @@
 package services
 
 import (
-	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
 	"demo-signserver/internal/repository/repositories"
 )
@@ -11,8 +10,7 @@ type ProfileService struct {
 }
 
 func NewProfileService() *ProfileService {
-	cfg := config.GetSignServerConfig()
-	repository := repositories.NewProfileRepository(cfg.ProfileTableName)
+	repository := repositories.NewProfileRepository()
 	return &ProfileService{repository: repository}
 }
 

@@ -3,77 +3,50 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"log"
-	"path/filepath"
 
+	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
 	"demo-signserver/internal/repository/repositories"
-	storages "demo-signserver/internal/storage"
 	"demo-signserver/pkg/eventbus"
 )
 
-type UploadEvent struct {
-	Bucket string
-	Key    string
-	ETag   string
-	Size   int64
-}
-
-func UploadReceivedHandler(bus *eventbus.EventBus) eventbus.Handler {
+func StorageUploadHandler(bus *eventbus.EventBus) eventbus.Handler {
+	methods := config.GetSignServerMethods()
 	return func(ctx context.Context, event any) error {
-		evt, ok := event.(UploadEvent)
+		request, ok := event.(*domain.SignRequest)
 
 		if !ok {
 			return fmt.Errorf("event type mismatch: %v", event)
 		}
 
-		repository := repositories.NewRequestRepository()
-		storage := storages.NewStorageService()
-
-		ID := filepath.Base(evt.Key)
-
-		request, err := repository.GetRequestByID(ID)
-
-		if err != nil {
-			return fmt.Errorf("error getting request by ID %s: %w", ID, err)
-		}
-
-		if (request.UnsignedFile.Bucket != evt.Bucket) ||
-			(request.UnsignedFile.Key != evt.Key) {
-			return fmt.Errorf("bucket or key mismatch for request %s", ID)
-		}
-
-		updateRequest := &domain.SignRequest{
-			History: request.History,
-		}
+		var (
+			err  error = nil
+			step       = "init"
+		)
 
 		defer func() {
-			if updateRequest.SignerStatus == nil {
-				log.Fatalf("signer status is nil for request %s", ID)
+			if r := recover(); r != nil {
+				err = fmt.Errorf("panic recovered: %v", r)
 			}
-			repository.UpdateRequest(ID, updateRequest)
+
+			if err != nil {
+				request.SetSignerStatus(domain.SignerStatusSigningFailed, &domain.SignerError{
+					Location: fmt.Sprintf("StorageUploadHandler step: %s", step),
+					Message:  err.Error(),
+				})
+			} else {
+				request.SetSignerStatus(domain.SignerStatusSignedAvailable, nil)
+			}
+			repository := repositories.NewRequestRepository()
+
+			repository.UpdateRequest(request.ID, request)
 		}()
 
-		err = storage.DownloadFileFromS3(evt.Key)
+		step = "upload_to_s3"
+		storage := methods.NewStorageService()
+		err = storage.UploadToS3(request.SignedFile)
 
 		if err != nil {
-			updateRequest.SetSignerStatus(domain.SignerStatusSigningFailed, &domain.SignerError{
-				Code:    "001",
-				Message: "Não foi possível baixar o arquivo: " + err.Error(),
-			})
-			return err
-		}
-
-		updateRequest.SetUnsignedBucketInfo(evt.Bucket, evt.Key, evt.ETag, evt.Size)
-		updateRequest.SetSignerStatus(domain.SignerStatusUploaded, nil)
-
-		err = bus.Publish("sign_process", ID)
-
-		if err != nil {
-			updateRequest.SetSignerStatus(domain.SignerStatusSigningFailed, &domain.SignerError{
-				Code:    "002",
-				Message: "Erro ao publicar evento de assinatura: " + err.Error(),
-			})
 			return err
 		}
 
