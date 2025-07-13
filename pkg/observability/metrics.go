@@ -1,6 +1,7 @@
 package observability
 
 import (
+	"context"
 	"log"
 	"sync"
 	"time"
@@ -80,4 +81,18 @@ func (a *AccumulatorSink) Get(name string) float64 {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.store[name]
+}
+
+type ctxKeySink struct{}
+
+func ContextWithSink(ctx context.Context, sink MetricsSink) context.Context {
+	return context.WithValue(ctx, ctxKeySink{}, sink)
+}
+
+func SinkFromContext(ctx context.Context) MetricsSink {
+	val := ctx.Value(ctxKeySink{})
+	if sink, ok := val.(MetricsSink); ok {
+		return sink
+	}
+	return nil
 }

@@ -1,9 +1,10 @@
-package services
+package orquestrator
 
 import (
+	"context"
 	"demo-signserver/internal/config"
+	"demo-signserver/internal/orquestrator/handlers"
 	"demo-signserver/internal/repository/repositories"
-	"demo-signserver/internal/signer/handlers"
 	"demo-signserver/pkg/eventbus"
 	message_adapters "demo-signserver/pkg/message/adapters"
 	"demo-signserver/pkg/storage"
@@ -13,21 +14,20 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
-type SignerService struct {
-	Queue    message_adapters.MessageQueueAdapterInterface
+type OrquestratorService struct {
+	Queue    message_adapters.MessageQueueAdapter
 	EventBus *eventbus.EventBus
 }
 
-func NewSignerService() *SignerService {
-	cfg := config.GetSignServerConfig()
+func NewOrquestratorService() *OrquestratorService {
 	methods := config.GetSignServerMethods()
-	return &SignerService{
-		Queue:    methods.NewMessageQueueAdapter(cfg.StorageBucketName, "unsigned"),
+	return &OrquestratorService{
+		Queue:    methods.NewMessageQueue(context.Background()),
 		EventBus: methods.NewEventBus(),
 	}
 }
 
-func (s *SignerService) Start() {
+func (s *OrquestratorService) Start() {
 	s.EventBus.Register("storage_download", handlers.StorageDownloadHandler(s.EventBus), 2, 10)
 	s.EventBus.Register("sign_process", handlers.SignProcessHandler(s.EventBus), 10, 20)
 	s.EventBus.Register("storage_upload", handlers.StorageUploadHandler(s.EventBus), 2, 10)
@@ -36,9 +36,7 @@ func (s *SignerService) Start() {
 		if ok {
 			for _, record := range s3evt.Records {
 				repository := repositories.NewRequestRepository()
-
 				ID := filepath.Base(record.S3.Object.Key)
-
 				request, err := repository.GetRequestByID(ID)
 
 				if err != nil {

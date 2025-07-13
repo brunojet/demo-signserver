@@ -1,9 +1,9 @@
 package adapters
 
 import (
+	"context"
 	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
-	"demo-signserver/internal/repository/repositories"
 	http_client "demo-signserver/pkg/http/client"
 	"fmt"
 	"net/http"
@@ -19,14 +19,9 @@ type PositivoSigner struct {
 	SignerProfile *domain.SignerProfile
 }
 
-func NewPositivoSigner(profileID string) (*PositivoSigner, error) {
+func NewPositivoSigner(ctx context.Context, profile *domain.SignerProfile) (ExternalSignerAdapter, error) {
 	methods := config.GetSignServerMethods()
-	httpClient := methods.NewHttpClient()
-	repo := repositories.NewProfileRepository()
-	profile, err := repo.GetProfileByID(profileID)
-	if err != nil {
-		return nil, err
-	}
+	httpClient := methods.NewHttpClient(ctx)
 
 	return &PositivoSigner{
 		SignerProfile: profile,

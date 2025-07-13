@@ -2,28 +2,32 @@ package handlers
 
 import (
 	"context"
+	"fmt"
+
 	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
 	"demo-signserver/internal/repository/repositories"
-	"demo-signserver/internal/signer/adapters"
 	"demo-signserver/pkg/eventbus"
-	"fmt"
+	"demo-signserver/pkg/storage"
 )
 
-// Evento: sign_process
-func SignProcessHandler(bus *eventbus.EventBus) eventbus.Handler {
+type StorageDownloadEvent struct {
+	storage.FileInfo
+}
+
+func StorageDownloadHandler(bus *eventbus.EventBus) eventbus.Handler {
 	methods := config.GetSignServerMethods()
 	return func(ctx context.Context, event any) error {
+		var (
+			err  error = nil
+			step       = "init"
+		)
+
 		request, ok := event.(*domain.SignRequest)
 
 		if !ok {
 			return fmt.Errorf("event type mismatch: %v", event)
 		}
-
-		var (
-			err  error = nil
-			step       = "init"
-		)
 
 		defer func() {
 			if r := recover(); r != nil {
@@ -32,7 +36,7 @@ func SignProcessHandler(bus *eventbus.EventBus) eventbus.Handler {
 
 			if err != nil {
 				request.SetSignerStatus(domain.SignerStatusSigningFailed, &domain.SignerError{
-					Location: fmt.Sprintf("SignProcessHandler step: %s", step),
+					Location: fmt.Sprintf("StorageDownloadHandler step: %s", step),
 					Message:  err.Error(),
 				})
 			} else {
@@ -42,37 +46,16 @@ func SignProcessHandler(bus *eventbus.EventBus) eventbus.Handler {
 			repository.UpdateRequest(request.ID, request)
 		}()
 
-		request.SetSignerStatus(domain.SignerStatusSigning, nil)
+		storage := methods.NewStorageService(ctx)
 
-		step = "new_positivo_signer"
-		externalSigner, err := adapters.NewPositivoSigner(*request.SignerProfileId)
-
+		step = "download_file_from_s3"
+		err = storage.DownloadFileFromS3(request.UnsignedFile)
 		if err != nil {
 			return err
 		}
 
-		storage := methods.NewStorageService()
-
-		srcPath := storage.GetWorkFilePath(request.UnsignedFile)
-
-		step = "start_sign"
-		ID, err := externalSigner.StartSign(srcPath)
-
-		if err != nil {
-			return err
-		}
-
-		dstPath := storage.GetWorkFilePath(request.SignedFile)
-
-		step = "wait_signature"
-		err = externalSigner.WaitSignature(ID, dstPath)
-
-		if err != nil {
-			return err
-		}
-
-		step = "publish_storage_upload"
-		err = bus.PublishWithContext(ctx, "storage_upload", request)
+		step = "publish_sign_process"
+		err = bus.PublishWithContext(ctx, "sign_process", request)
 
 		if err != nil {
 			return err

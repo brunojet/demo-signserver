@@ -1,6 +1,7 @@
 package http_client
 
 import (
+	"context"
 	"net/http"
 	"time"
 )
@@ -13,21 +14,23 @@ const (
 )
 
 type HttpClient struct {
-	Adapter        HttpClientAdapter
-	Tries          int
-	Interval       int
-	ShouldContinue func(statusCode StatusCode) bool // Corrigido nome
+	ctx            context.Context
+	adapter        HttpClientAdapter
+	tries          int
+	interval       int
+	shouldContinue func(statusCode StatusCode) bool
 }
 
-func NewHttpClient(adapter HttpClientAdapter) *HttpClient {
+func NewHttpClient(ctx context.Context, adapter HttpClientAdapter) *HttpClient {
 	if adapter == nil {
 		panic("HttpClientAdapter cannot be nil")
 	}
 	return &HttpClient{
-		Adapter:  adapter,
-		Tries:    httpClientMinTries,
-		Interval: httpClientMinInterval,
-		ShouldContinue: func(statusCode StatusCode) bool {
+		ctx:      ctx,
+		adapter:  adapter,
+		tries:    httpClientMinTries,
+		interval: httpClientMinInterval,
+		shouldContinue: func(statusCode StatusCode) bool {
 			answer := false
 			switch statusCode {
 			case http.StatusOK, http.StatusCreated:
@@ -44,36 +47,36 @@ func NewHttpClient(adapter HttpClientAdapter) *HttpClient {
 
 func (h *HttpClient) SetShouldContinue(tries, interval int, shouldContinue func(statusCode StatusCode) bool) {
 	if tries >= httpClientMinTries && tries <= httpClientMaxTries {
-		h.Tries = tries
+		h.tries = tries
 	}
 
 	if interval >= httpClientMinInterval && interval <= httpClientMaxInterval {
-		h.Interval = interval
+		h.interval = interval
 	}
 
 	if shouldContinue != nil {
-		h.ShouldContinue = shouldContinue
+		h.shouldContinue = shouldContinue
 	}
 }
 
 func (h *HttpClient) UploadFile(method HttpMethod, headers map[string]string, url string, path string, response any) StatusCode {
-	for i := 0; i < h.Tries; i++ {
-		statusCode := h.Adapter.UploadFile(method, headers, url, path, response)
-		if !h.ShouldContinue(statusCode) {
+	for i := 0; i < h.tries; i++ {
+		statusCode := h.adapter.UploadFile(method, headers, url, path, response)
+		if !h.shouldContinue(statusCode) {
 			return statusCode
 		}
-		time.Sleep(time.Duration(h.Interval) * time.Second)
+		time.Sleep(time.Duration(h.interval) * time.Second)
 	}
 	return StatusCode(http.StatusGatewayTimeout)
 }
 
 func (h *HttpClient) DownloadFile(headers map[string]string, url string, dstPath string, response any) StatusCode {
-	for i := 0; i < h.Tries; i++ {
-		statusCode := h.Adapter.DownloadFile(headers, url, dstPath, response)
-		if !h.ShouldContinue(statusCode) {
+	for i := 0; i < h.tries; i++ {
+		statusCode := h.adapter.DownloadFile(headers, url, dstPath, response)
+		if !h.shouldContinue(statusCode) {
 			return statusCode
 		}
-		time.Sleep(time.Duration(h.Interval) * time.Second)
+		time.Sleep(time.Duration(h.interval) * time.Second)
 	}
 	return StatusCode(http.StatusGatewayTimeout)
 }
