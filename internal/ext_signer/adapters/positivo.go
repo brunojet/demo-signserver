@@ -62,7 +62,6 @@ func (s *PositivoSigner) WaitSignature(ID string, dstPath string) error {
 	}
 
 	response := &PositivoSignerResponse{}
-
 	statusCode := s.HttpClient.DownloadFile(headers, fmt.Sprintf("%s/%s", endpoint.URL, ID), dstPath, response)
 
 	if statusCode != http.StatusOK {

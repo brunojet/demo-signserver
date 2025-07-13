@@ -2,6 +2,7 @@ package http_client
 
 import (
 	"context"
+	"demo-signserver/pkg/observability"
 	"net/http"
 	"time"
 )
@@ -15,7 +16,7 @@ const (
 
 type HttpClient struct {
 	ctx            context.Context
-	obs            *ObservabilityHttpClientMiddleware
+	obs            *observability.ObservabilityMiddleware[StatusCode]
 	adapter        HttpClientAdapter
 	tries          int
 	interval       int
@@ -28,7 +29,7 @@ func NewHttpClient(ctx context.Context, adapter HttpClientAdapter) *HttpClient {
 	}
 	return &HttpClient{
 		ctx:      ctx,
-		obs:      NewObservabilityHttpClientMiddleware(ctx),
+		obs:      observability.NewObservabilityMiddleware[StatusCode](ctx),
 		adapter:  adapter,
 		tries:    httpClientMinTries,
 		interval: httpClientMinInterval,
@@ -41,7 +42,6 @@ func NewHttpClient(ctx context.Context, adapter HttpClientAdapter) *HttpClient {
 			default:
 				answer = true
 			}
-
 			return answer
 		},
 	}
@@ -63,7 +63,7 @@ func (h *HttpClient) SetShouldContinue(tries, interval int, shouldContinue func(
 
 func (h *HttpClient) UploadFile(method HttpMethod, headers map[string]string, url string, path string, response any) StatusCode {
 	for i := 0; i < h.tries; i++ {
-		statusCode := h.obs.do("UploadFile", func() StatusCode {
+		statusCode := h.obs.Do("UploadFile", func() StatusCode {
 			return h.adapter.UploadFile(method, headers, url, path, response)
 		})
 		if !h.shouldContinue(statusCode) {
@@ -76,7 +76,7 @@ func (h *HttpClient) UploadFile(method HttpMethod, headers map[string]string, ur
 
 func (h *HttpClient) DownloadFile(headers map[string]string, url string, dstPath string, response any) StatusCode {
 	for i := 0; i < h.tries; i++ {
-		statusCode := h.obs.do("DownloadFile", func() StatusCode {
+		statusCode := h.obs.Do("DownloadFile", func() StatusCode {
 			return h.adapter.DownloadFile(headers, url, dstPath, response)
 		})
 
