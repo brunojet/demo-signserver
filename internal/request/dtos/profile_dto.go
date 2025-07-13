@@ -13,7 +13,6 @@ type CreateProfileDTO struct {
 	ProfileId   string                  `json:"profile_id" binding:"required,len=3,numeric"`
 	Description string                  `json:"description" binding:"required,min=3,max=255"`
 	Configs     *[]domain.ProfileConfig `json:"configs,omitempty"`
-	ContentType string                  `json:"content_type" binding:"required,oneof=binary/octet-stream application/vnd.android.package-archive"`
 	Upload      TransferInfoDTO         `json:"upload" binding:"required"`
 	Download    TransferInfoDTO         `json:"download" binding:"required"`
 }
@@ -21,7 +20,6 @@ type CreateProfileDTO struct {
 type UpdateProfileDTO struct {
 	Description *string                 `json:"description,omitempty" binding:"omitempty,min=3,max=255"`
 	Configs     *[]domain.ProfileConfig `json:"configs,omitempty"`
-	ContentType *string                 `json:"content_type,omitempty" binding:"omitempty,oneof=binary/octet-stream application/vnd.android.package-archive"`
 	Upload      *TransferInfoDTO        `json:"upload,omitempty"`
 	Download    *TransferInfoDTO        `json:"download,omitempty"`
 }

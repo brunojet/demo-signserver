@@ -39,11 +39,11 @@ func (o *DefaultObservableHandler) HandlerStart(eventType HandlerName) HandlerCt
 	traceID := generateTraceID()
 	start := time.Now()
 	if o.Obs != nil {
-		observability.LogInfo("eventbus.handler.start", map[string]interface{}{
+		observability.LogInfo("eventbus.handler.start.log", map[string]interface{}{
 			"traceID":   traceID,
 			"eventType": eventType,
 		})
-		o.Obs.Inc("eventbus.handler.start", map[string]string{"eventType": string(eventType), "traceID": traceID})
+		//o.Obs.Inc("eventbus.handler.start.metric", map[string]string{"eventType": string(eventType), "traceID": traceID})
 	}
 	return HandlerCtx{EventType: eventType, TraceID: traceID, Start: start}
 }

@@ -72,7 +72,7 @@ func SignProcessHandler(bus *eventbus.EventBus) eventbus.Handler {
 		}
 
 		step = "publish_storage_upload"
-		err = bus.Publish("storage_upload", request)
+		err = bus.PublishWithContext(ctx, "storage_upload", request)
 
 		if err != nil {
 			return err

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"log"
 	"path/filepath"
 
 	"demo-signserver/internal/config"
@@ -66,7 +67,9 @@ func StorageDownloadHandler(bus *eventbus.EventBus) eventbus.Handler {
 			return err
 		}
 
-		err = bus.Publish("sign_process", request)
+		log.Printf("[StorageDownloadHandler] File downloaded successfully: %s\n", request.UnsignedFile.FilePath)
+		err = bus.PublishWithContext(ctx, "sign_process", request)
+		log.Printf("[StorageDownloadHandler] Event published: sign_process for request %s\n", request.ID)
 
 		if err != nil {
 			step = "publish_sign_process"
