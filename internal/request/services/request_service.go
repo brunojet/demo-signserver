@@ -95,8 +95,8 @@ func (s *RequestService) getPresignedGetUrl(response *domain.SignGetResponse, fi
 		return
 	}
 	httpMethod := domain.HttpMethodGet
-	response.HttpMethod = httpMethod
-	response.DownloadURL = url
+	response.HttpMethod = &httpMethod
+	response.DownloadURL = &url
 }
 
 func (s *RequestService) generatePresignedPutURL(fileInfo *storage.FileInfo) (string, error) {

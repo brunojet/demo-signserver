@@ -16,7 +16,7 @@ type HttpClient struct {
 	Adapter        HttpClientAdapter
 	Tries          int
 	Interval       int
-	ShouldContinue func(statusCode int) bool // Corrigido nome
+	ShouldContinue func(statusCode StatusCode) bool // Corrigido nome
 }
 
 func NewHttpClient(adapter HttpClientAdapter) *HttpClient {
@@ -27,7 +27,7 @@ func NewHttpClient(adapter HttpClientAdapter) *HttpClient {
 		Adapter:  adapter,
 		Tries:    httpClientMinTries,
 		Interval: httpClientMinInterval,
-		ShouldContinue: func(statusCode int) bool {
+		ShouldContinue: func(statusCode StatusCode) bool {
 			answer := false
 			switch statusCode {
 			case http.StatusOK, http.StatusCreated:
@@ -42,7 +42,7 @@ func NewHttpClient(adapter HttpClientAdapter) *HttpClient {
 	}
 }
 
-func (h *HttpClient) SetShouldContinue(tries, interval int, shouldContinue func(statusCode int) bool) {
+func (h *HttpClient) SetShouldContinue(tries, interval int, shouldContinue func(statusCode StatusCode) bool) {
 	if tries >= httpClientMinTries && tries <= httpClientMaxTries {
 		h.Tries = tries
 	}
@@ -56,24 +56,24 @@ func (h *HttpClient) SetShouldContinue(tries, interval int, shouldContinue func(
 	}
 }
 
-func (h *HttpClient) UploadFile(method HttpMethod, headers map[string]string, url string, path string) HttpClientResponse {
+func (h *HttpClient) UploadFile(method HttpMethod, headers map[string]string, url string, path string, response any) StatusCode {
 	for i := 0; i < h.Tries; i++ {
-		response := h.Adapter.UploadFile(method, headers, url, path)
-		if !h.ShouldContinue(response.StatusCode) {
-			return response
+		statusCode := h.Adapter.UploadFile(method, headers, url, path, response)
+		if !h.ShouldContinue(statusCode) {
+			return statusCode
 		}
 		time.Sleep(time.Duration(h.Interval) * time.Second)
 	}
-	return HttpClientResponse{Body: "", StatusCode: http.StatusGatewayTimeout}
+	return StatusCode(http.StatusGatewayTimeout)
 }
 
-func (h *HttpClient) DownloadFile(headers map[string]string, url string, dstPath string) HttpClientResponse {
+func (h *HttpClient) DownloadFile(headers map[string]string, url string, dstPath string, response any) StatusCode {
 	for i := 0; i < h.Tries; i++ {
-		response := h.Adapter.DownloadFile(headers, url, dstPath)
-		if !h.ShouldContinue(response.StatusCode) {
-			return response
+		statusCode := h.Adapter.DownloadFile(headers, url, dstPath, response)
+		if !h.ShouldContinue(statusCode) {
+			return statusCode
 		}
 		time.Sleep(time.Duration(h.Interval) * time.Second)
 	}
-	return HttpClientResponse{Body: "", StatusCode: http.StatusGatewayTimeout}
+	return StatusCode(http.StatusGatewayTimeout)
 }

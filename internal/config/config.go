@@ -10,7 +10,9 @@ import (
 	"demo-signserver/pkg/storage"
 	storage_adapters "demo-signserver/pkg/storage/adapters"
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"demo-signserver/pkg/eventbus"
@@ -28,13 +30,14 @@ type SignServerMethods struct {
 	NewDynamoDBService     func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService
 	NewMessageQueueAdapter func(unsignedDir, bucket string) message_adapters.MessageQueueAdapterInterface
 	NewEventBus            func() *eventbus.EventBus
-	NewHttpClient          func() http_client.HttpClientAdapter
+	NewHttpClient          func() *http_client.HttpClient
 }
 
 type SignServerConfig struct {
 	RequestTableName  string
 	ProfileTableName  string
 	StorageBucketName string
+	LocalStorage      *string
 }
 
 func OsGetenvPanic(key string) string {
@@ -55,13 +58,23 @@ func GetSignServerConfig() *SignServerConfig {
 		profileTable := MakeResourceName("SIGN_PROFILE_TABLE")
 		storageBucket := MakeResourceName("SIGN_STORAGE_BUCKET")
 
+		var localStorage *string
+
+		if OsGetenvPanic("ENVIRONMENT") == "local" {
+			localPath := filepath.Join(os.TempDir(), "demo_sign_server")
+			storageBucket = filepath.Join(localPath, "sign_storage_bucket")
+			localStorage = &localPath
+			log.Printf("Using local storage path: %s\n", *localStorage)
+		}
+
 		SignServerConfigInstance = &SignServerConfig{
 			ProfileTableName:  profileTable,
 			RequestTableName:  requestTable,
 			StorageBucketName: storageBucket,
+			LocalStorage:      localStorage,
 		}
 
-		if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
+		if OsGetenvPanic("ENVIRONMENT") == "local" {
 			db := db_services.NewDB()
 			db.CreateTable(context.Background(), profileTable, db_services.SORT_KEY)
 			db.CreateTable(context.Background(), requestTable, db_services.NO_KEY)
@@ -73,18 +86,21 @@ func GetSignServerConfig() *SignServerConfig {
 func GetSignServerMethods() *SignServerMethods {
 	onceMethods.Do(func() {
 		sink := observability.NewAccumulatorSink()
+		config := GetSignServerConfig()
 
 		SignServerMethodsInstance = &SignServerMethods{
-			NewMessageQueueAdapter: func(bucketName, unsignedDir string) message_adapters.MessageQueueAdapterInterface {
-				// Replace with a real MetricsSink if available
-				return message_adapters.NewLocalS3EventQueue(bucketName, unsignedDir, sink)
+			NewMessageQueueAdapter: func(storagePath, unsignedDir string) message_adapters.MessageQueueAdapterInterface {
+				if config.LocalStorage != nil {
+					return message_adapters.NewLocalS3EventQueue(storagePath, unsignedDir, sink)
+				}
+				panic("Message queue adapter not implemented for non-local environments")
 			},
 			NewEventBus: func() *eventbus.EventBus {
 				return eventbus.NewEventBusWithSink(sink)
 			},
 			NewStorageService: func() storage.StorageAdapter {
-				if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
-					adapter := storage_adapters.NewLocalStorageService()
+				if config.LocalStorage != nil {
+					adapter := storage_adapters.NewLocalStorageService(*config.LocalStorage)
 					return storage.NewStorageService(adapter)
 				}
 
@@ -93,10 +109,10 @@ func GetSignServerMethods() *SignServerMethods {
 			NewDynamoDBService: func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService {
 				return db_services.NewDynamoDBService(tableName, pkKey, skKey)
 			},
-			NewHttpClient: func() http_client.HttpClientAdapter {
+			NewHttpClient: func() *http_client.HttpClient {
 				var adapter http_client.HttpClientAdapter
-				if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
-					adapter = http_client_adapters.NewFileHttpClientAdapter()
+				if config.LocalStorage != nil {
+					adapter = http_client_adapters.NewFileHttpClientAdapter(*config.LocalStorage)
 				} else {
 					adapter = http_client_adapters.NewHttpClientAdapter()
 				}

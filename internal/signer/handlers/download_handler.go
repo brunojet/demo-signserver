@@ -32,10 +32,12 @@ func StorageDownloadHandler(bus *eventbus.EventBus) eventbus.Handler {
 
 		repository := repositories.NewRequestRepository()
 
-		request, err := repository.GetRequestByID(filepath.Base(evt.FilePath))
+		ID := filepath.Base(evt.FilePath)
+
+		request, err := repository.GetRequestByID(ID)
 
 		if err != nil {
-			return fmt.Errorf("error getting request by ID %s: %w", request.ID, err)
+			return fmt.Errorf("error getting request by ID %s: %w", ID, err)
 		}
 
 		defer func() {

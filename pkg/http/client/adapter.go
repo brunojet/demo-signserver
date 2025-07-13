@@ -8,12 +8,9 @@ const (
 	HttpMethodPost HttpMethod = "POST"
 )
 
-type HttpClientResponse struct {
-	Body       string
-	StatusCode int
-}
+type StatusCode int
 
 type HttpClientAdapter interface {
-	UploadFile(method HttpMethod, headers map[string]string, url string, path string) HttpClientResponse
-	DownloadFile(headers map[string]string, url string, path string) HttpClientResponse
+	UploadFile(method HttpMethod, headers map[string]string, url string, path string, response any) StatusCode
+	DownloadFile(headers map[string]string, url string, path string, response any) StatusCode
 }

@@ -2,6 +2,7 @@ package adapters
 
 import (
 	http_client "demo-signserver/pkg/http/client"
+	"encoding/json"
 	"io"
 	"math/rand"
 	"os"
@@ -24,14 +25,22 @@ type fileMeta struct {
 	ReadyTime time.Time
 }
 
-func NewFileHttpClientAdapter() http_client.HttpClientAdapter {
-	workPath := filepath.Join(os.TempDir(), "http_file_client")
-
-	if _, err := os.Stat(workPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(workPath, 0755); err != nil {
-			panic("Failed to create work path: " + err.Error())
+func createPathIfNotExists(path string) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.MkdirAll(path, 0755); err != nil {
+			panic("Failed to create path: " + err.Error())
 		}
 	}
+}
+
+func createFilePath(filePath string) (*os.File, error) {
+	createPathIfNotExists(filepath.Dir(filePath))
+	return os.Create(filePath)
+}
+
+func NewFileHttpClientAdapter(localStorage string) http_client.HttpClientAdapter {
+	workPath := filepath.Join(localStorage, "http_file_client")
+	createPathIfNotExists(workPath)
 
 	return &FileHttpClientAdapter{
 		WorkPath: workPath,
@@ -39,64 +48,73 @@ func NewFileHttpClientAdapter() http_client.HttpClientAdapter {
 	}
 }
 
-func (h *FileHttpClientAdapter) UploadFile(_ http_client.HttpMethod, _ map[string]string, _ string, srcPath string) http_client.HttpClientResponse {
-	response := http_client.HttpClientResponse{Body: "", StatusCode: 500}
+func (h *FileHttpClientAdapter) UploadFile(_ http_client.HttpMethod, _ map[string]string, _ string, srcPath string, response any) http_client.StatusCode {
+	statusCode := http_client.StatusCode(500)
+
 	src, err := os.Open(srcPath)
 	if err != nil {
-		return response
+		return statusCode
 	}
 	defer src.Close()
 
 	dstPath := filepath.Join(h.WorkPath, uuid.New().String())
-	dst, err := os.Create(dstPath)
+
+	dst, err := createFilePath(dstPath)
+
 	if err != nil {
-		return response
+		return statusCode
 	}
 	defer dst.Close()
 
 	if _, err := io.Copy(dst, src); err != nil {
-		return response
+		return statusCode
 	}
 
-	id := path.Base(dstPath)
+	id := filepath.Base(dstPath)
 	delay := rand.Intn(31) + 15
 	meta := fileMeta{Path: dstPath, ReadyTime: time.Now().Add(time.Duration(delay) * time.Second)}
 	h.Files[id] = meta
 
-	return response
+	bodyMap := map[string]string{"id": id}
+	bodyBytes, err := json.Marshal(bodyMap)
+	if err != nil {
+		return statusCode
+	}
+
+	if response != nil {
+		_ = json.Unmarshal(bodyBytes, response)
+	}
+
+	return http_client.StatusCode(200)
 }
 
-func (h *FileHttpClientAdapter) DownloadFile(_ map[string]string, downloadURL string, dstPath string) http_client.HttpClientResponse {
-	response := http_client.HttpClientResponse{Body: "", StatusCode: 500}
+func (h *FileHttpClientAdapter) DownloadFile(_ map[string]string, downloadURL string, dstPath string, response any) http_client.StatusCode {
+	statusCode := http_client.StatusCode(500)
 	id := path.Base(downloadURL)
 	meta, ok := h.Files[id]
 	if !ok {
-		response.StatusCode = 404
-		return response
+		return statusCode
 	}
 
 	src, err := os.Open(meta.Path)
 	if err != nil {
-		response.StatusCode = 404
-		return response
+		return http_client.StatusCode(404)
 	}
 	defer src.Close()
 
 	if time.Now().Before(meta.ReadyTime) {
-		response.StatusCode = 202
-		return response
+		return http_client.StatusCode(202)
 	}
 
-	dst, err := os.Create(dstPath)
+	dst, err := createFilePath(dstPath)
 	if err != nil {
-		return response
+		return statusCode
 	}
 	defer dst.Close()
 
 	if _, err := io.Copy(dst, src); err != nil {
-		return response
+		return statusCode
 	}
 
-	response.StatusCode = 200
-	return response
+	return http_client.StatusCode(200)
 }

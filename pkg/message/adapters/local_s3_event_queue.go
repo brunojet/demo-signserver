@@ -25,20 +25,20 @@ type LocalS3EventQueue struct {
 }
 
 // NewLocalS3EventQueue cria um novo watcher para o diretório local
-func NewLocalS3EventQueue(bucket, keyPath string, sink observability.MetricsSink) *LocalS3EventQueue {
-	watcherPath := filepath.Join(os.TempDir(), bucket, keyPath)
+func NewLocalS3EventQueue(storagePath, filePath string, sink observability.MetricsSink) *LocalS3EventQueue {
+	watcherPath := filepath.Join(storagePath, filePath)
 	if err := os.MkdirAll(watcherPath, 0755); err != nil {
-		log.Fatalf("Erro ao criar diretório watcherPath: %v", err)
+		panic(fmt.Sprintf("Erro ao criar diretório watcherPath: %v", err))
 	}
+	log.Printf("LocalS3EventQueue initialized with watcher path: %s\n", watcherPath)
 	var metrics *observability.MetricsService
 	if sink != nil {
 		metrics = observability.NewMetricsService(sink)
 	}
-
 	return &LocalS3EventQueue{
 		WatcherPath: watcherPath,
-		Bucket:      bucket,
-		KeyPath:     keyPath,
+		Bucket:      storagePath,
+		KeyPath:     filePath,
 		Metrics:     metrics,
 	}
 }

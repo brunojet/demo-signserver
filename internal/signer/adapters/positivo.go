@@ -15,13 +15,13 @@ type ExternalSigner interface {
 }
 
 type PositivoSigner struct {
-	HttpClientAdapter http_client.HttpClientAdapter
-	SignerProfile     *domain.SignerProfile
+	HttpClient    *http_client.HttpClient
+	SignerProfile *domain.SignerProfile
 }
 
 func NewPositivoSigner(profileID string) (*PositivoSigner, error) {
 	methods := config.GetSignServerMethods()
-	httpClientAdapter := methods.NewHttpClient()
+	httpClient := methods.NewHttpClient()
 	repo := repositories.NewProfileRepository()
 	profile, err := repo.GetProfileByID(profileID)
 	if err != nil {
@@ -29,42 +29,49 @@ func NewPositivoSigner(profileID string) (*PositivoSigner, error) {
 	}
 
 	return &PositivoSigner{
-		SignerProfile:     profile,
-		HttpClientAdapter: httpClientAdapter,
+		SignerProfile: profile,
+		HttpClient:    httpClient,
 	}, nil
+}
+
+type PositivoSignerResponse struct {
+	ID string `json:"id"`
 }
 
 func (s *PositivoSigner) StartSign(srcPath string) (string, error) {
 	endpoint := s.SignerProfile.Upload
-	httpClient := http_client.NewHttpClient(s.HttpClientAdapter)
-	httpClient.SetShouldContinue(endpoint.Tries, endpoint.Interval, nil)
+	s.HttpClient.SetShouldContinue(endpoint.Tries, endpoint.Interval, nil)
 
 	headers := map[string]string{
-		"Content-Type": *s.SignerProfile.ContentType,
+		"Accept":       "application/json",
+		"Content-Type": "vnd.android.package-archive",
 	}
 
-	response := httpClient.UploadFile(http_client.HttpMethodGet, headers, endpoint.URL, srcPath)
+	response := &PositivoSignerResponse{}
 
-	if response.StatusCode != http.StatusOK {
-		return response.Body, fmt.Errorf("erro ao enviar arquivo: (status: %d)", response.StatusCode)
+	statusCode := s.HttpClient.UploadFile(http_client.HttpMethodGet, headers, endpoint.URL, srcPath, response)
+
+	if statusCode != http.StatusOK {
+		return "", fmt.Errorf("erro ao enviar arquivo: (status: %d)", statusCode)
 	}
 
-	return response.Body, nil
+	return response.ID, nil
 }
 
 func (s *PositivoSigner) WaitSignature(ID string, dstPath string) error {
 	endpoint := s.SignerProfile.Download
-	httpClient := http_client.NewHttpClient(s.HttpClientAdapter)
-	httpClient.SetShouldContinue(endpoint.Tries, endpoint.Interval, nil)
+	s.HttpClient.SetShouldContinue(endpoint.Tries, endpoint.Interval, nil)
 
 	headers := map[string]string{
-		"Accept": *s.SignerProfile.ContentType,
+		"Accept": "vnd.android.package-archive",
 	}
 
-	response := httpClient.DownloadFile(headers, fmt.Sprintf("%s/%s", endpoint.URL, ID), dstPath)
+	response := &PositivoSignerResponse{}
 
-	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("erro ao enviar arquivo: (status: %d)", response.StatusCode)
+	statusCode := s.HttpClient.DownloadFile(headers, fmt.Sprintf("%s/%s", endpoint.URL, ID), dstPath, response)
+
+	if statusCode != http.StatusOK {
+		return fmt.Errorf("erro ao enviar arquivo: (status: %d)", statusCode)
 	}
 
 	return nil

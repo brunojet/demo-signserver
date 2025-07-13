@@ -29,7 +29,6 @@ type SignerProfile struct {
 	Signer      *Signer          `dynamodbav:"signer,omitempty"`
 	ProfileId   *string          `dynamodbav:"profile_id,omitempty"`
 	Description *string          `dynamodbav:"description,omitempty"`
-	ContentType *string          `dynamodbav:"content_type,omitempty"`
 	Configs     *[]ProfileConfig `dynamodbav:"configs,omitempty"`
 	Upload      *TransferInfo    `dynamodbav:"upload,omitempty"`
 	Download    *TransferInfo    `dynamodbav:"download,omitempty"`
