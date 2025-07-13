@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"demo-signserver/pkg/file"
 	http_client "demo-signserver/pkg/http/client"
 	"encoding/json"
 	"io"
@@ -25,22 +26,9 @@ type fileMeta struct {
 	ReadyTime time.Time
 }
 
-func createPathIfNotExists(path string) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, 0755); err != nil {
-			panic("Failed to create path: " + err.Error())
-		}
-	}
-}
-
-func createFilePath(filePath string) (*os.File, error) {
-	createPathIfNotExists(filepath.Dir(filePath))
-	return os.Create(filePath)
-}
-
 func NewFileHttpClientAdapter(localStorage string) http_client.HttpClientAdapter {
 	workPath := filepath.Join(localStorage, "http_file_client")
-	createPathIfNotExists(workPath)
+	file.CreatePathIfNotExists(workPath)
 
 	return &FileHttpClientAdapter{
 		WorkPath: workPath,
@@ -59,7 +47,7 @@ func (h *FileHttpClientAdapter) UploadFile(_ http_client.HttpMethod, _ map[strin
 
 	dstPath := filepath.Join(h.WorkPath, uuid.New().String())
 
-	dst, err := createFilePath(dstPath)
+	dst, err := file.CreateFilePath(dstPath)
 
 	if err != nil {
 		return statusCode
@@ -71,7 +59,7 @@ func (h *FileHttpClientAdapter) UploadFile(_ http_client.HttpMethod, _ map[strin
 	}
 
 	id := filepath.Base(dstPath)
-	delay := rand.Intn(31) + 15
+	delay := rand.Intn(30) + 15
 	meta := fileMeta{Path: dstPath, ReadyTime: time.Now().Add(time.Duration(delay) * time.Second)}
 	h.Files[id] = meta
 
@@ -106,7 +94,7 @@ func (h *FileHttpClientAdapter) DownloadFile(_ map[string]string, downloadURL st
 		return http_client.StatusCode(202)
 	}
 
-	dst, err := createFilePath(dstPath)
+	dst, err := file.CreateFilePath(dstPath)
 	if err != nil {
 		return statusCode
 	}

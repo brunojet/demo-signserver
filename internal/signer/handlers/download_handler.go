@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
 
 	"demo-signserver/internal/config"
@@ -43,7 +42,6 @@ func StorageDownloadHandler(bus *eventbus.EventBus) eventbus.Handler {
 
 		defer func() {
 			if r := recover(); r != nil {
-				step = "panic_recovery"
 				err = fmt.Errorf("panic recovered: %v", r)
 			}
 
@@ -60,19 +58,16 @@ func StorageDownloadHandler(bus *eventbus.EventBus) eventbus.Handler {
 
 		storage := methods.NewStorageService()
 
+		step = "download_file_from_s3"
 		err = storage.DownloadFileFromS3(request.UnsignedFile)
-
 		if err != nil {
-			step = "download_file_from_s3"
 			return err
 		}
 
-		log.Printf("[StorageDownloadHandler] File downloaded successfully: %s\n", request.UnsignedFile.FilePath)
+		step = "publish_sign_process"
 		err = bus.PublishWithContext(ctx, "sign_process", request)
-		log.Printf("[StorageDownloadHandler] Event published: sign_process for request %s\n", request.ID)
 
 		if err != nil {
-			step = "publish_sign_process"
 			return err
 		}
 

@@ -51,7 +51,7 @@ func (s *PositivoSigner) StartSign(srcPath string) (string, error) {
 
 	statusCode := s.HttpClient.UploadFile(http_client.HttpMethodGet, headers, endpoint.URL, srcPath, response)
 
-	if statusCode != http.StatusOK {
+	if statusCode != http.StatusOK && statusCode != http.StatusCreated {
 		return "", fmt.Errorf("erro ao enviar arquivo: (status: %d)", statusCode)
 	}
 
@@ -71,7 +71,7 @@ func (s *PositivoSigner) WaitSignature(ID string, dstPath string) error {
 	statusCode := s.HttpClient.DownloadFile(headers, fmt.Sprintf("%s/%s", endpoint.URL, ID), dstPath, response)
 
 	if statusCode != http.StatusOK {
-		return fmt.Errorf("erro ao enviar arquivo: (status: %d)", statusCode)
+		return fmt.Errorf("erro ao receber arquivo: (status: %d)", statusCode)
 	}
 
 	return nil

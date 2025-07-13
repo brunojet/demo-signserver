@@ -2,10 +2,10 @@ package adapters
 
 import (
 	"crypto/md5"
+	"demo-signserver/pkg/file"
 	"demo-signserver/pkg/storage"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,16 +20,7 @@ type LocalStorageService struct {
 
 func NewLocalStorageService(localStorage string) storage.StorageAdapter {
 	workPath := filepath.Join(localStorage, "local_storage_service")
-
-	if _, err := os.Stat(workPath); !os.IsNotExist(err) {
-		os.Remove(workPath)
-	}
-
-	if err := os.MkdirAll(workPath, 0755); err != nil {
-		panic("erro ao criar diretório base: " + err.Error())
-	}
-
-	log.Printf("LocalStorageService initialized with work path: %s\n", workPath)
+	file.CreatePathIfNotExists(workPath)
 
 	return &LocalStorageService{
 		WorkPath: workPath,
@@ -50,11 +41,7 @@ func (l *LocalStorageService) DownloadFileFromS3(fileInfo *storage.FileInfo) err
 	}
 	defer in.Close()
 
-	if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
-		panic("erro ao criar diretório base: " + err.Error())
-	}
-
-	out, err := os.Create(dstPath)
+	out, err := file.CreateFilePath(dstPath)
 	if err != nil {
 		return fmt.Errorf("erro ao criar arquivo destino: %w", err)
 	}
@@ -84,11 +71,8 @@ func (l *LocalStorageService) UploadToS3(fileInfo *storage.FileInfo) error {
 	}
 	defer in.Close()
 
-	if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
-		panic("erro ao criar diretório base: " + err.Error())
-	}
+	out, err := file.CreateFilePath(dstPath)
 
-	out, err := os.Create(dstPath)
 	if err != nil {
 		return fmt.Errorf("erro ao criar arquivo destino: %w", err)
 	}

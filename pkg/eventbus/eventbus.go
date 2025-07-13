@@ -3,7 +3,6 @@ package eventbus
 import (
 	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"sync"
 
@@ -40,25 +39,6 @@ func NewEventBus() *EventBus {
 	}
 }
 
-func (b *EventBus) getLock(caller string) {
-	if b.ObsHandler != nil {
-		b.ObsHandler.HandlerLogInfo(caller, caller, map[string]interface{}{
-			"message": "Obtendo lock para manipulação de workers",
-		})
-	}
-	b.mu.Lock()
-}
-
-func (b *EventBus) releaseLock(caller string) {
-	b.mu.Unlock()
-	if b.ObsHandler != nil {
-		b.ObsHandler.HandlerLogInfo(caller, caller, map[string]interface{}{
-			"message": "Liberando lock após manipulação de workers",
-		})
-	}
-}
-
-// NewEventBus permite injetar um MetricsSink customizado para métricas e logs.
 func NewEventBusWithSink(sink observability.MetricsSink) *EventBus {
 	eventBus := NewEventBus()
 	if sink != nil {
@@ -136,9 +116,23 @@ func (b *EventBus) isValidWorkerParams(caller string, handler Handler, numWorker
 	return nil
 }
 
+type traceIDKeyType struct{}
+
+var traceIDKey = traceIDKeyType{}
+
 func (b *EventBus) WrapHandlerWithObservability(eventType HandlerName, handler Handler) Handler {
 	return func(ctx context.Context, event any) error {
-		hCtx := b.ObsHandler.HandlerStart(eventType)
+		var (
+			traceID = ctx.Value(traceIDKey)
+			hCtx    HandlerCtx
+		)
+		if traceID == nil || traceID == "" {
+			hCtx = b.ObsHandler.HandlerStart(eventType)
+			ctx = context.WithValue(ctx, traceIDKey, hCtx.TraceID)
+		} else {
+			hCtx = b.ObsHandler.HandlerStartWithTraceId(eventType, traceID.(string))
+		}
+
 		var err error = nil
 		defer func() {
 			if r := recover(); r != nil {
@@ -155,8 +149,8 @@ func (b *EventBus) WrapHandlerWithObservability(eventType HandlerName, handler H
 }
 
 func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers int, queueBacklog int) error {
-	b.getLock("Register")
-	defer b.releaseLock("Register")
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	if err := b.isValidWorkerParams("eventbus.register", handler, numWorkers, queueBacklog); err != nil {
 		return err
 	}
@@ -176,10 +170,9 @@ func (b *EventBus) Register(eventType HandlerName, handler Handler, numWorkers i
 	return nil
 }
 
-// Unregister remove o handler e para os workers do tipo de evento.
 func (b *EventBus) Unregister(eventType HandlerName) error {
-	b.getLock("Unregister")
-	defer b.releaseLock("Unregister")
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	w, err := b.getOrErrorWorker("eventbus.unregister", eventType)
 	if err != nil {
 		return err
@@ -192,24 +185,21 @@ func (b *EventBus) Unregister(eventType HandlerName) error {
 	return nil
 }
 
-// Publish envia o evento para o pool de workers do tipo, se existir.
-// Permite passar um contexto externo para cancelamento/timeout do handler.
 func (b *EventBus) PublishWithContext(ctx context.Context, eventType HandlerName, data any) error {
-	b.getLock("PublishWithContext")
-	defer b.releaseLock("PublishWithContext")
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	w, err := b.getOrErrorWorker("eventbus.publish_with_context", eventType)
 	if err != nil {
 		return err
 	}
-	log.Printf("[EventBus] Publicando evento do tipo %s com dados: %v\n", eventType, data)
 	w.pool.Enqueue(func(poolCtx context.Context) {
 		realCtx := ctx
 		if ctx == context.TODO() {
 			realCtx = poolCtx
 		}
+
 		w.handler(realCtx, data)
 	})
-	log.Printf("[EventBus] Evento do tipo %s enfileirado com sucesso.\n", eventType)
 	return nil
 }
 
@@ -220,8 +210,8 @@ func (b *EventBus) Publish(eventType HandlerName, data any) error {
 
 // Stop encerra todos os workers de todos os tipos de evento e limpa o map.
 func (b *EventBus) Stop() {
-	b.getLock("Stop")
-	defer b.releaseLock("Stop")
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	for _, w := range b.workers {
 		w.pool.Stop()
 	}
@@ -230,8 +220,6 @@ func (b *EventBus) Stop() {
 	}
 }
 
-// WaitForHandlers aguarda até que todas as tasks enfileiradas sejam processadas pelos workers do(s) eventType(s) informados.
-// Se nenhum eventType for passado, aguarda todos os workers.
 func (b *EventBus) WaitForHandlers(eventTypes ...HandlerName) error {
 	b.mu.RLock()
 	defer b.mu.RUnlock()

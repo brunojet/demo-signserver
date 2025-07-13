@@ -15,7 +15,9 @@ type HandlerCtx struct {
 }
 
 type ObservableHandler interface {
+	GenerateTraceID() string
 	HandlerStart(eventType HandlerName) HandlerCtx
+	HandlerStartWithTraceId(eventType HandlerName, traceID string) HandlerCtx
 	HandlerSuccess(ctx HandlerCtx)
 	HandlerError(ctx HandlerCtx, err error)
 	HandlerPanic(ctx HandlerCtx, panicVal any)
@@ -35,17 +37,21 @@ func NewDefaultObservableHandler(obs *observability.MetricsService) *DefaultObse
 	}
 }
 
-func (o *DefaultObservableHandler) HandlerStart(eventType HandlerName) HandlerCtx {
-	traceID := generateTraceID()
+func (o *DefaultObservableHandler) HandlerStartWithTraceId(eventType HandlerName, traceID string) HandlerCtx {
 	start := time.Now()
 	if o.Obs != nil {
 		observability.LogInfo("eventbus.handler.start.log", map[string]interface{}{
 			"traceID":   traceID,
 			"eventType": eventType,
 		})
-		//o.Obs.Inc("eventbus.handler.start.metric", map[string]string{"eventType": string(eventType), "traceID": traceID})
+		o.Obs.Inc("eventbus.handler.start.metric", map[string]string{"eventType": string(eventType), "traceID": traceID})
 	}
 	return HandlerCtx{EventType: eventType, TraceID: traceID, Start: start}
+}
+
+func (o *DefaultObservableHandler) HandlerStart(eventType HandlerName) HandlerCtx {
+	traceID := o.GenerateTraceID()
+	return o.HandlerStartWithTraceId(eventType, traceID)
 }
 
 func (o *DefaultObservableHandler) HandlerSuccess(ctx HandlerCtx) {
@@ -116,4 +122,8 @@ func (o *DefaultObservableHandler) HandlerLogError(caller, method string, err er
 
 func generateTraceID() string {
 	return uuid.NewString()
+}
+
+func (o *DefaultObservableHandler) GenerateTraceID() string {
+	return generateTraceID()
 }

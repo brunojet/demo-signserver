@@ -97,9 +97,7 @@ func (wp *WorkerPool) Enqueue(task Task) bool {
 		}
 	}()
 	atomic.AddUint64(&wp.TasksEnqueued, 1)
-	log.Printf("[WorkerPool] Enfileirando tarefa: %v\n", task)
 	wp.tasks <- task
-	log.Printf("[WorkerPool] Tarefa enfileirada com sucesso: %v\n", task)
 
 	return true
 }
