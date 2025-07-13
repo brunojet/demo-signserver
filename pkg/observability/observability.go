@@ -84,7 +84,7 @@ func (o *ObservabilityMiddleware[T]) Do(caller string, handler HandlerFunc[T]) (
 
 	o.MetricsInc("http_client_count", map[string]string{"caller": caller, "requestID": o.requestID})
 
-	span, ctxWithSpan := StartSpan(o.ctx, "http_client", o.requestID)
+	span, ctxWithSpan := StartSpan(o.ctx, caller, o.requestID)
 
 	defer func() {
 		if span != nil {
