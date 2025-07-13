@@ -8,39 +8,57 @@ import (
 	"time"
 )
 
-type UploadHandlerFunc func() StatusCode
+type HandlerFunc func() StatusCode
 
-func logAsync(log *log.Logger, logEntry any) {
-	if log != nil {
-		jsonLog, _ := json.Marshal(logEntry)
-		log.Println(string(jsonLog))
-	}
+type ObservabilityHttpClientMiddleware struct {
+	ctx       context.Context
+	metrics   *observability.MetricsService
+	logger    *log.Logger
+	requestID string
 }
 
-func ObservabilityHttpClientMiddleware(ctx context.Context, caller string, handler UploadHandlerFunc) (statusCode StatusCode) {
-	start := time.Now()
-	statusCode = StatusCode(500)
+func NewObservabilityHttpClientMiddleware(ctx context.Context) *ObservabilityHttpClientMiddleware {
 	sink := observability.SinkFromContext(ctx)
 	metrics := observability.NewMetricsService(sink)
 	logger := observability.LoggerFromContext(ctx)
 	requestID := observability.RequestIDFromContext(ctx)
+
 	if requestID == "" {
 		requestID = "unknown-request-id"
 	}
 
-	logAsync(logger, map[string]interface{}{
+	return &ObservabilityHttpClientMiddleware{
+		ctx:       ctx,
+		metrics:   metrics,
+		logger:    logger,
+		requestID: requestID,
+	}
+}
+
+func (o *ObservabilityHttpClientMiddleware) log(logEntry any) {
+	if o.logger != nil {
+		jsonLog, _ := json.Marshal(logEntry)
+		o.logger.Println(string(jsonLog))
+	}
+}
+
+func (o *ObservabilityHttpClientMiddleware) do(caller string, handler HandlerFunc) StatusCode {
+	start := time.Now()
+	statusCode := StatusCode(500)
+
+	o.log(map[string]interface{}{
 		"timestamp": time.Now().Format(time.RFC3339),
 		"level":     "info",
-		"requestID": requestID,
+		"requestID": o.requestID,
 		"caller":    caller,
 		"msg":       "Requisição iniciada",
 	})
 
-	if metrics != nil {
-		metrics.Inc("http_client_count", map[string]string{"caller": caller, "requestID": requestID})
+	if o.metrics != nil {
+		o.metrics.Inc("http_client_count", map[string]string{"caller": caller, "requestID": o.requestID})
 	}
 
-	span, ctxWithSpan := observability.StartSpan(ctx, "http_client", requestID)
+	span, ctxWithSpan := observability.StartSpan(o.ctx, "http_client", o.requestID)
 
 	defer func() {
 		if span != nil {
@@ -48,10 +66,22 @@ func ObservabilityHttpClientMiddleware(ctx context.Context, caller string, handl
 		}
 		duration := time.Since(start)
 
-		logAsync(logger, map[string]interface{}{
+		if r := recover(); r != nil {
+			o.log(map[string]interface{}{
+				"timestamp": time.Now().Format(time.RFC3339),
+				"level":     "error",
+				"requestID": o.requestID,
+				"caller":    caller,
+				"msg":       "Pânico durante execução do handler",
+				"panic":     r,
+			})
+			statusCode = StatusCode(500)
+		}
+
+		o.log(map[string]interface{}{
 			"timestamp":   time.Now().Format(time.RFC3339),
 			"level":       "info",
-			"requestID":   requestID,
+			"requestID":   o.requestID,
 			"caller":      caller,
 			"msg":         "Requisição finalizada",
 			"statusCode":  statusCode,
@@ -59,25 +89,10 @@ func ObservabilityHttpClientMiddleware(ctx context.Context, caller string, handl
 		})
 	}()
 
-	// Handler executado com contexto do span e tratamento de pânico
-	defer func() {
-		if r := recover(); r != nil {
-			logAsync(logger, map[string]interface{}{
-				"timestamp": time.Now().Format(time.RFC3339),
-				"level":     "error",
-				"requestID": requestID,
-				"caller":    caller,
-				"msg":       "Pânico durante execução do handler",
-				"panic":     r,
-			})
-			statusCode = StatusCode(500)
-		}
-	}()
-
 	statusCode = handlerWithContext(handler, ctxWithSpan)
 	return statusCode
 }
 
-func handlerWithContext(handler UploadHandlerFunc, _ context.Context) StatusCode {
+func handlerWithContext(handler HandlerFunc, _ context.Context) StatusCode {
 	return handler()
 }

@@ -15,6 +15,7 @@ const (
 
 type HttpClient struct {
 	ctx            context.Context
+	obs            *ObservabilityHttpClientMiddleware
 	adapter        HttpClientAdapter
 	tries          int
 	interval       int
@@ -27,6 +28,7 @@ func NewHttpClient(ctx context.Context, adapter HttpClientAdapter) *HttpClient {
 	}
 	return &HttpClient{
 		ctx:      ctx,
+		obs:      NewObservabilityHttpClientMiddleware(ctx),
 		adapter:  adapter,
 		tries:    httpClientMinTries,
 		interval: httpClientMinInterval,
@@ -61,7 +63,7 @@ func (h *HttpClient) SetShouldContinue(tries, interval int, shouldContinue func(
 
 func (h *HttpClient) UploadFile(method HttpMethod, headers map[string]string, url string, path string, response any) StatusCode {
 	for i := 0; i < h.tries; i++ {
-		statusCode := ObservabilityHttpClientMiddleware(h.ctx, "UploadFile", func() StatusCode {
+		statusCode := h.obs.do("UploadFile", func() StatusCode {
 			return h.adapter.UploadFile(method, headers, url, path, response)
 		})
 		if !h.shouldContinue(statusCode) {
@@ -74,7 +76,7 @@ func (h *HttpClient) UploadFile(method HttpMethod, headers map[string]string, ur
 
 func (h *HttpClient) DownloadFile(headers map[string]string, url string, dstPath string, response any) StatusCode {
 	for i := 0; i < h.tries; i++ {
-		statusCode := ObservabilityHttpClientMiddleware(h.ctx, "DownloadFile", func() StatusCode {
+		statusCode := h.obs.do("DownloadFile", func() StatusCode {
 			return h.adapter.DownloadFile(headers, url, dstPath, response)
 		})
 
