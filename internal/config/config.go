@@ -26,11 +26,11 @@ var (
 )
 
 type SignServerMethods struct {
-	NewStorageService      func() storage.StorageAdapter
-	NewDynamoDBService     func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService
-	NewMessageQueueAdapter func(unsignedDir, bucket string) message_adapters.MessageQueueAdapterInterface
-	NewEventBus            func() *eventbus.EventBus
-	NewHttpClient          func() *http_client.HttpClient
+	NewStorageService  func(ctx context.Context) storage.StorageAdapter
+	NewDynamoDBService func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService
+	NewMessageQueue    func(ctx context.Context) message_adapters.MessageQueueAdapter
+	NewEventBus        func() *eventbus.EventBus
+	NewHttpClient      func(ctx context.Context) *http_client.HttpClient
 }
 
 type SignServerConfig struct {
@@ -86,37 +86,45 @@ func GetSignServerConfig() *SignServerConfig {
 func GetSignServerMethods() *SignServerMethods {
 	onceMethods.Do(func() {
 		sink := observability.NewAccumulatorSink()
+		logger := log.Default()
 		config := GetSignServerConfig()
 
 		SignServerMethodsInstance = &SignServerMethods{
-			NewMessageQueueAdapter: func(storagePath, unsignedDir string) message_adapters.MessageQueueAdapterInterface {
+			NewMessageQueue: func(ctx context.Context) message_adapters.MessageQueueAdapter {
+				ctx = observability.ContextWithSink(ctx, sink)
+				ctx = observability.ContextWithLogger(ctx, logger)
 				if config.LocalStorage != nil {
-					return message_adapters.NewLocalS3EventQueue(storagePath, unsignedDir, sink)
+					return message_adapters.NewLocalS3EventQueue(ctx, config.StorageBucketName, "unsigned")
 				}
 				panic("Message queue adapter not implemented for non-local environments")
 			},
 			NewEventBus: func() *eventbus.EventBus {
 				return eventbus.NewEventBusWithSink(sink)
 			},
-			NewStorageService: func() storage.StorageAdapter {
+			NewStorageService: func(ctx context.Context) storage.StorageAdapter {
+				ctx = observability.ContextWithSink(ctx, sink)
+				ctx = observability.ContextWithLogger(ctx, logger)
+				var adapter storage.StorageAdapter
 				if config.LocalStorage != nil {
-					adapter := storage_adapters.NewLocalStorageService(*config.LocalStorage)
-					return storage.NewStorageService(adapter)
+					adapter = storage_adapters.NewLocalStorageService(*config.LocalStorage)
+				} else {
+					panic("Storage adapter not implemented for non-local environments")
 				}
-
-				panic("Storage service not implemented for non-local environments")
+				return storage.NewStorageService(ctx, adapter)
 			},
 			NewDynamoDBService: func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService {
 				return db_services.NewDynamoDBService(tableName, pkKey, skKey)
 			},
-			NewHttpClient: func() *http_client.HttpClient {
+			NewHttpClient: func(ctx context.Context) *http_client.HttpClient {
+				ctx = observability.ContextWithSink(ctx, sink)
+				ctx = observability.ContextWithLogger(ctx, logger)
 				var adapter http_client.HttpClientAdapter
 				if config.LocalStorage != nil {
 					adapter = http_client_adapters.NewFileHttpClientAdapter(*config.LocalStorage)
 				} else {
 					adapter = http_client_adapters.NewHttpClientAdapter()
 				}
-				return http_client.NewHttpClient(adapter)
+				return http_client.NewHttpClient(ctx, adapter)
 			},
 		}
 	})

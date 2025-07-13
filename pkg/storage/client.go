@@ -1,13 +1,18 @@
 package storage
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type StorageService struct {
+	ctx     context.Context
 	adapter StorageAdapter
 }
 
-func NewStorageService(adapter StorageAdapter) StorageAdapter {
+func NewStorageService(ctx context.Context, adapter StorageAdapter) StorageAdapter {
 	return &StorageService{
+		ctx:     ctx,
 		adapter: adapter,
 	}
 }

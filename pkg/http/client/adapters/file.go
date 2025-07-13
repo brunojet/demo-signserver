@@ -59,7 +59,7 @@ func (h *FileHttpClientAdapter) UploadFile(_ http_client.HttpMethod, _ map[strin
 	}
 
 	id := filepath.Base(dstPath)
-	delay := rand.Intn(30) + 15
+	delay := rand.Intn(25) + 15
 	meta := fileMeta{Path: dstPath, ReadyTime: time.Now().Add(time.Duration(delay) * time.Second)}
 	h.Files[id] = meta
 

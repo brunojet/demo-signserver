@@ -43,7 +43,7 @@ func StorageUploadHandler(bus *eventbus.EventBus) eventbus.Handler {
 		}()
 
 		step = "upload_to_s3"
-		storage := methods.NewStorageService()
+		storage := methods.NewStorageService(ctx)
 		err = storage.UploadToS3(request.SignedFile)
 
 		if err != nil {

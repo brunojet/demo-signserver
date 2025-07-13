@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,7 +19,7 @@ func TestLocalS3EventQueue_Start(t *testing.T) {
 	os.MkdirAll(fullPath, 0755)
 	defer os.RemoveAll(fullPath)
 
-	queue := NewLocalS3EventQueue(bucket, keyPath, nil)
+	queue := NewLocalS3EventQueue(context.Background(), bucket, keyPath)
 
 	received := make(chan events.S3Event, 1)
 	stop := queue.Start(func(event any) {

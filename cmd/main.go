@@ -1,8 +1,8 @@
 package main
 
 import (
+	"demo-signserver/internal/orquestrator"
 	"demo-signserver/internal/request/http_handlers"
-	"demo-signserver/internal/signer/services"
 	"log"
 	"os"
 
@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	signerSvc := services.NewSignerService()
+	signerSvc := orquestrator.NewOrquestratorService()
 	signerSvc.Start()
 	r := gin.Default()
 

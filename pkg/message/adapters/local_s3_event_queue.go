@@ -1,7 +1,9 @@
 package adapters
 
 import (
+	"context"
 	"crypto/md5"
+	"demo-signserver/pkg/observability"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -10,36 +12,31 @@ import (
 	"path/filepath"
 	"time"
 
-	"demo-signserver/pkg/observability"
-
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/fsnotify/fsnotify"
 )
 
 // LocalS3EventQueue simula recebimento de eventos SQS contendo eventos S3 (PutObject)
 type LocalS3EventQueue struct {
-	WatcherPath string // caminho base simulando o bucket
-	Bucket      string
-	KeyPath     string
-	Metrics     *observability.MetricsService // opcional
+	metrics     *observability.MetricsService
+	watcherPath string
+	storagePath string
+	filePath    string
 }
 
 // NewLocalS3EventQueue cria um novo watcher para o diretório local
-func NewLocalS3EventQueue(storagePath, filePath string, sink observability.MetricsSink) *LocalS3EventQueue {
+func NewLocalS3EventQueue(ctx context.Context, storagePath, filePath string) *LocalS3EventQueue {
+	sink := observability.SinkFromContext(ctx)
+	metrics := observability.NewMetricsService(sink)
 	watcherPath := filepath.Join(storagePath, filePath)
 	if err := os.MkdirAll(watcherPath, 0755); err != nil {
 		panic(fmt.Sprintf("Erro ao criar diretório watcherPath: %v", err))
 	}
-	log.Printf("LocalS3EventQueue initialized with watcher path: %s\n", watcherPath)
-	var metrics *observability.MetricsService
-	if sink != nil {
-		metrics = observability.NewMetricsService(sink)
-	}
 	return &LocalS3EventQueue{
-		WatcherPath: watcherPath,
-		Bucket:      storagePath,
-		KeyPath:     filePath,
-		Metrics:     metrics,
+		metrics:     metrics,
+		watcherPath: watcherPath,
+		storagePath: storagePath,
+		filePath:    filePath,
 	}
 }
 
@@ -49,8 +46,8 @@ func (l *LocalS3EventQueue) Start(onMessage func(event any)) (stop func()) {
 	if err != nil {
 		log.Fatalf("Erro ao criar watcher: %v", err)
 	}
-	if err := watcher.Add(l.WatcherPath); err != nil {
-		log.Fatalf("Erro ao monitorar diretório %s: %v", l.KeyPath, err)
+	if err := watcher.Add(l.watcherPath); err != nil {
+		log.Fatalf("Erro ao monitorar diretório %s: %v", l.filePath, err)
 	}
 	quit := make(chan struct{})
 	go func() {
@@ -58,7 +55,7 @@ func (l *LocalS3EventQueue) Start(onMessage func(event any)) (stop func()) {
 			select {
 			case event := <-watcher.Events:
 				if event.Op&fsnotify.Create == fsnotify.Create {
-					key := filepath.Join(l.KeyPath, filepath.Base(event.Name))
+					key := filepath.Join(l.filePath, filepath.Base(event.Name))
 					filePath := event.Name
 					fileInfo, err := os.Stat(filePath)
 					var size int64
@@ -81,9 +78,9 @@ func (l *LocalS3EventQueue) Start(onMessage func(event any)) (stop func()) {
 								SchemaVersion:   "1.0",
 								ConfigurationID: "local-config",
 								Bucket: events.S3Bucket{
-									Name:          l.Bucket,
+									Name:          l.storagePath,
 									OwnerIdentity: events.S3UserIdentity{PrincipalID: "LOCAL"},
-									Arn:           "arn:aws:s3:::" + l.Bucket,
+									Arn:           "arn:aws:s3:::" + l.storagePath,
 								},
 								Object: events.S3Object{
 									Key:       key,
@@ -95,10 +92,10 @@ func (l *LocalS3EventQueue) Start(onMessage func(event any)) (stop func()) {
 							},
 						}},
 					}
-					l.Metrics.Inc(
+					l.metrics.Inc(
 						"local_s3_event_queue.file_created",
 						map[string]string{
-							"bucket": l.Bucket,
+							"bucket": l.storagePath,
 							"key":    key,
 							"size":   fmt.Sprintf("%d", size),
 						},

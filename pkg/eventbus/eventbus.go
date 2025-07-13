@@ -116,21 +116,17 @@ func (b *EventBus) isValidWorkerParams(caller string, handler Handler, numWorker
 	return nil
 }
 
-type traceIDKeyType struct{}
-
-var traceIDKey = traceIDKeyType{}
-
 func (b *EventBus) WrapHandlerWithObservability(eventType HandlerName, handler Handler) Handler {
 	return func(ctx context.Context, event any) error {
 		var (
-			traceID = ctx.Value(traceIDKey)
+			traceID = observability.RequestIDFromContext(ctx)
 			hCtx    HandlerCtx
 		)
-		if traceID == nil || traceID == "" {
+		if traceID == "" {
 			hCtx = b.ObsHandler.HandlerStart(eventType)
-			ctx = context.WithValue(ctx, traceIDKey, hCtx.TraceID)
+			ctx = observability.ContextWithTraceID(ctx, hCtx.TraceID)
 		} else {
-			hCtx = b.ObsHandler.HandlerStartWithTraceId(eventType, traceID.(string))
+			hCtx = b.ObsHandler.HandlerStartWithTraceId(eventType, traceID)
 		}
 
 		var err error = nil

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
 	"demo-signserver/internal/repository/repositories"
@@ -20,7 +21,7 @@ type RequestService struct {
 func NewRequestService() *RequestService {
 	cfg := config.GetSignServerConfig()
 	methods := config.GetSignServerMethods()
-	storage := methods.NewStorageService()
+	storage := methods.NewStorageService(context.Background())
 	repository := repositories.NewRequestRepository()
 	return &RequestService{repository: repository, storage: storage, storagePath: cfg.StorageBucketName}
 }
