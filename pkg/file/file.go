@@ -19,3 +19,10 @@ func CreateFilePath(filePath string) (*os.File, error) {
 	CreatePathIfNotExists(filepath.Dir(filePath))
 	return os.Create(filePath)
 }
+
+func DeleteFilePath(filePath string) error {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil
+	}
+	return os.Remove(filePath)
+}
