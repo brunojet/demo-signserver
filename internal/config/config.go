@@ -2,28 +2,48 @@ package config
 
 import (
 	"context"
+	http_client "demo-signserver/pkg/http/client"
+	http_client_adapters "demo-signserver/pkg/http/client/adapters"
+	message_adapters "demo-signserver/pkg/message/adapters"
+	"demo-signserver/pkg/observability"
 	db_services "demo-signserver/pkg/repository/services"
+	"demo-signserver/pkg/storage"
+	storage_adapters "demo-signserver/pkg/storage/adapters"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
+
+	"demo-signserver/pkg/eventbus"
 )
 
 var (
-	SignServerConfigInstance *SignServerConfig
-	once                     sync.Once
+	SignServerConfigInstance  *SignServerConfig
+	SignServerMethodsInstance *SignServerMethods
+	onceConfig                sync.Once
+	onceMethods               sync.Once
 )
+
+type SignServerMethods struct {
+	NewStorageService      func() storage.StorageAdapter
+	NewDynamoDBService     func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService
+	NewMessageQueueAdapter func(unsignedDir, bucket string) message_adapters.MessageQueueAdapterInterface
+	NewEventBus            func() *eventbus.EventBus
+	NewHttpClient          func() *http_client.HttpClient
+}
 
 type SignServerConfig struct {
 	RequestTableName  string
 	ProfileTableName  string
 	StorageBucketName string
+	LocalStorage      *string
 }
 
 func OsGetenvPanic(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
-		log.Fatalf("Environment variable %s is not set", key)
+		panic(fmt.Sprintf("Environment variable %s is not set", key))
 	}
 	return value
 }
@@ -33,22 +53,72 @@ func MakeResourceName(resource string) string {
 }
 
 func GetSignServerConfig() *SignServerConfig {
-	once.Do(func() {
+	onceConfig.Do(func() {
+		requestTable := MakeResourceName("SIGN_REQUEST_TABLE")
+		profileTable := MakeResourceName("SIGN_PROFILE_TABLE")
+		storageBucket := MakeResourceName("SIGN_STORAGE_BUCKET")
+
+		var localStorage *string
+
+		if OsGetenvPanic("ENVIRONMENT") == "local" {
+			localPath := filepath.Join(os.TempDir(), "demo_sign_server")
+			storageBucket = filepath.Join(localPath, "sign_storage_bucket")
+			localStorage = &localPath
+			log.Printf("Using local storage path: %s\n", *localStorage)
+		}
+
 		SignServerConfigInstance = &SignServerConfig{
-			RequestTableName:  MakeResourceName("SIGN_REQUEST_TABLE"),
-			ProfileTableName:  MakeResourceName("SIGN_PROFILE_TABLE"),
-			StorageBucketName: MakeResourceName("SIGN_STORAGE_BUCKET"),
+			ProfileTableName:  profileTable,
+			RequestTableName:  requestTable,
+			StorageBucketName: storageBucket,
+			LocalStorage:      localStorage,
+		}
+
+		if OsGetenvPanic("ENVIRONMENT") == "local" {
+			db := db_services.NewDB()
+			db.CreateTable(context.Background(), profileTable, db_services.SORT_KEY)
+			db.CreateTable(context.Background(), requestTable, db_services.NO_KEY)
 		}
 	})
 	return SignServerConfigInstance
 }
 
-func SetupLocalEnvironment() {
-	if environment := os.Getenv("ENVIRONMENT"); environment == "local" {
-		db := db_services.NewDB()
+func GetSignServerMethods() *SignServerMethods {
+	onceMethods.Do(func() {
+		sink := observability.NewAccumulatorSink()
 		config := GetSignServerConfig()
-		db.CreateTable(context.Background(), config.ProfileTableName, db_services.SORT_KEY)
-		db.CreateTable(context.Background(), config.RequestTableName, db_services.NO_KEY)
-		fmt.Println("Local environment setup completed.")
-	}
+
+		SignServerMethodsInstance = &SignServerMethods{
+			NewMessageQueueAdapter: func(storagePath, unsignedDir string) message_adapters.MessageQueueAdapterInterface {
+				if config.LocalStorage != nil {
+					return message_adapters.NewLocalS3EventQueue(storagePath, unsignedDir, sink)
+				}
+				panic("Message queue adapter not implemented for non-local environments")
+			},
+			NewEventBus: func() *eventbus.EventBus {
+				return eventbus.NewEventBusWithSink(sink)
+			},
+			NewStorageService: func() storage.StorageAdapter {
+				if config.LocalStorage != nil {
+					adapter := storage_adapters.NewLocalStorageService(*config.LocalStorage)
+					return storage.NewStorageService(adapter)
+				}
+
+				panic("Storage service not implemented for non-local environments")
+			},
+			NewDynamoDBService: func(tableName string, pkKey string, skKey string) *db_services.DynamoDBService {
+				return db_services.NewDynamoDBService(tableName, pkKey, skKey)
+			},
+			NewHttpClient: func() *http_client.HttpClient {
+				var adapter http_client.HttpClientAdapter
+				if config.LocalStorage != nil {
+					adapter = http_client_adapters.NewFileHttpClientAdapter(*config.LocalStorage)
+				} else {
+					adapter = http_client_adapters.NewHttpClientAdapter()
+				}
+				return http_client.NewHttpClient(adapter)
+			},
+		}
+	})
+	return SignServerMethodsInstance
 }

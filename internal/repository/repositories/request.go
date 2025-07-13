@@ -18,7 +18,8 @@ type RequestRepository struct {
 
 func NewRequestRepository() *RequestRepository {
 	cfg := config.GetSignServerConfig()
-	dynamo := db_services.NewDynamoDBService(cfg.RequestTableName, db_services.ID_KEY, db_services.NO_KEY)
+	methods := config.GetSignServerMethods()
+	dynamo := methods.NewDynamoDBService(cfg.RequestTableName, db_services.ID_KEY, db_services.NO_KEY)
 	return &RequestRepository{Dynamo: dynamo}
 }
 

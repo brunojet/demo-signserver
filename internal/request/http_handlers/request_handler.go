@@ -27,11 +27,11 @@ func (h *RequestHandler) CreateRequest(c *gin.Context) {
 	domain := dto.GetDomainCreateSignRequest()
 	response, err := h.Service.CreateRequest(domain)
 	if err != nil {
-		if contains(err.Error(), "não encontrado") {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		if contains(err.Error(), "Erro ao buscar item com ID") {
+			c.JSON(http.StatusPreconditionFailed, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, response)
 		return
 	}
 	c.Header("Location", "/requests/"+response.ID)

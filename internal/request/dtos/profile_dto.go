@@ -18,7 +18,7 @@ type CreateProfileDTO struct {
 }
 
 type UpdateProfileDTO struct {
-	Description *string                 `json:"description,omitempty" binding:"min=3,max=255"`
+	Description *string                 `json:"description,omitempty" binding:"omitempty,min=3,max=255"`
 	Configs     *[]domain.ProfileConfig `json:"configs,omitempty"`
 	Upload      *TransferInfoDTO        `json:"upload,omitempty"`
 	Download    *TransferInfoDTO        `json:"download,omitempty"`

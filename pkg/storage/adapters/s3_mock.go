@@ -3,7 +3,7 @@
 // Exemplo de uso:
 //
 //	mock := &MockPresignClient{URL: "https://mock-url"}
-package storage_services
+package adapters
 
 import (
 	"context"

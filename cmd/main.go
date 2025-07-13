@@ -1,8 +1,8 @@
 package main
 
 import (
-	"demo-signserver/internal/config"
 	"demo-signserver/internal/request/http_handlers"
+	"demo-signserver/internal/signer/services"
 	"log"
 	"os"
 
@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	config.SetupLocalEnvironment()
-
+	signerSvc := services.NewSignerService()
+	signerSvc.Start()
 	r := gin.Default()
 
 	// Rotas de perfil

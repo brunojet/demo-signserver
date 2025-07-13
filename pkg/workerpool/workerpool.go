@@ -98,6 +98,7 @@ func (wp *WorkerPool) Enqueue(task Task) bool {
 	}()
 	atomic.AddUint64(&wp.TasksEnqueued, 1)
 	wp.tasks <- task
+
 	return true
 }
 
@@ -109,6 +110,11 @@ func (wp *WorkerPool) Stop() {
 		close(wp.tasks)
 	}
 	wp.mu.Unlock()
+	wp.wg.Wait()
+}
+
+// Wait aguarda todos os workers processarem as tasks pendentes (útil para testes)
+func (wp *WorkerPool) Wait() {
 	wp.wg.Wait()
 }
 

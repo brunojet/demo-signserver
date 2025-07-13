@@ -1,8 +1,8 @@
 # Arquitetura Atual do demo-signserver
 
-Este documento descreve a arquitetura atual do projeto, incluindo dois diagramas: um de arquitetura AWS e outro de sequência do fluxo principal.
+Este documento descreve a arquitetura do projeto, fluxos principais e integrações.
 
-## Diagrama 1: Arquitetura AWS
+## Diagrama de Arquitetura AWS
 
 ```mermaid
 graph TD
@@ -22,7 +22,7 @@ graph TD
     end
 ```
 
-## Diagrama 2: Sequência do Fluxo
+## Diagrama de Sequência do Fluxo
 
 ```mermaid
 sequenceDiagram
@@ -44,6 +44,10 @@ sequenceDiagram
     Lambda-->>S3: Salva APK assinado
     StepFn-->>Usuário: Notifica conclusão
 ```
+
+## Fluxograma Geral
+
+Consulte `docs/fluxogramas.md` para fluxogramas detalhados do fluxo ponta-a-ponta e observabilidade.
 
 ---
 
