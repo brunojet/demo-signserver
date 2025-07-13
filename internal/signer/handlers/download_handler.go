@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"demo-signserver/internal/config"
 	"demo-signserver/internal/repository/domain"
@@ -24,20 +23,10 @@ func StorageDownloadHandler(bus *eventbus.EventBus) eventbus.Handler {
 			step       = "init"
 		)
 
-		evt, ok := event.(StorageDownloadEvent)
+		request, ok := event.(*domain.SignRequest)
 
 		if !ok {
 			return fmt.Errorf("event type mismatch: %v", event)
-		}
-
-		repository := repositories.NewRequestRepository()
-
-		ID := filepath.Base(evt.FilePath)
-
-		request, err := repository.GetRequestByID(ID)
-
-		if err != nil {
-			return fmt.Errorf("error getting request by ID %s: %w", ID, err)
 		}
 
 		defer func() {
@@ -53,6 +42,7 @@ func StorageDownloadHandler(bus *eventbus.EventBus) eventbus.Handler {
 			} else {
 				request.SetSignerStatus(domain.SignerStatusUploaded, nil)
 			}
+			repository := repositories.NewRequestRepository()
 			repository.UpdateRequest(request.ID, request)
 		}()
 
