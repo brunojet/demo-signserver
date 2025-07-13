@@ -86,11 +86,13 @@ func GetSignServerConfig() *SignServerConfig {
 func GetSignServerMethods() *SignServerMethods {
 	onceMethods.Do(func() {
 		sink := observability.NewAccumulatorSink()
+		logger := log.Default()
 		config := GetSignServerConfig()
 
 		SignServerMethodsInstance = &SignServerMethods{
 			NewMessageQueue: func(ctx context.Context) message_adapters.MessageQueueAdapter {
 				ctx = observability.ContextWithSink(ctx, sink)
+				ctx = observability.ContextWithLogger(ctx, logger)
 				if config.LocalStorage != nil {
 					return message_adapters.NewLocalS3EventQueue(ctx, config.StorageBucketName, "unsigned")
 				}
@@ -101,6 +103,7 @@ func GetSignServerMethods() *SignServerMethods {
 			},
 			NewStorageService: func(ctx context.Context) storage.StorageAdapter {
 				ctx = observability.ContextWithSink(ctx, sink)
+				ctx = observability.ContextWithLogger(ctx, logger)
 				var adapter storage.StorageAdapter
 				if config.LocalStorage != nil {
 					adapter = storage_adapters.NewLocalStorageService(*config.LocalStorage)
@@ -114,6 +117,7 @@ func GetSignServerMethods() *SignServerMethods {
 			},
 			NewHttpClient: func(ctx context.Context) *http_client.HttpClient {
 				ctx = observability.ContextWithSink(ctx, sink)
+				ctx = observability.ContextWithLogger(ctx, logger)
 				var adapter http_client.HttpClientAdapter
 				if config.LocalStorage != nil {
 					adapter = http_client_adapters.NewFileHttpClientAdapter(*config.LocalStorage)

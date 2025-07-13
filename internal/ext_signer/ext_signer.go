@@ -5,11 +5,13 @@ import (
 	"demo-signserver/internal/ext_signer/adapters"
 	"demo-signserver/internal/repository/domain"
 	"demo-signserver/internal/repository/repositories"
+	"demo-signserver/pkg/observability"
 )
 
 type ExternalSignerAdapter adapters.ExternalSignerAdapter
 
 type ExternalSigner struct {
+	metrics *observability.MetricsService
 	adapter ExternalSignerAdapter
 }
 
