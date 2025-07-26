@@ -2,25 +2,27 @@
 
 Este documento descreve a arquitetura do projeto, fluxos principais e integrações.
 
-## Diagrama de Arquitetura AWS
+
+## Diagrama de Arquitetura
 
 ```mermaid
 graph TD
-    subgraph AWS
+    subgraph Infraestrutura
         S3[S3 Bucket]
-        Lambda[Lambda: Processa Pedido]
-        StepFn[Step Functions: Orquestração]
-        EventBridge[EventBridge: Eventos]
+        EventBus[EventBus: Eventos Internos]
+        Orquestrator[Orquestrator: Orquestração]
+        WorkerPool[WorkerPool: Paralelismo]
         DynamoDB[DynamoDB: Logs/Resultados]
         POS[Fabricante POS: Assinatura APK]
-        S3 --> EventBridge
-        EventBridge --> StepFn
-        StepFn --> Lambda
-        Lambda --> POS
-        Lambda --> DynamoDB
-        StepFn --> S3
+        S3 --> Orquestrator
+        Orquestrator --> EventBus
+        EventBus --> WorkerPool
+        WorkerPool --> POS
+        WorkerPool --> DynamoDB
+        WorkerPool --> S3
     end
 ```
+
 
 ## Diagrama de Sequência do Fluxo
 
@@ -28,21 +30,21 @@ graph TD
 sequenceDiagram
     participant Usuário
     participant S3
-    participant EventBridge
-    participant StepFn as Step Functions
-    participant Lambda
+    participant Orquestrator
+    participant EventBus
+    participant WorkerPool
     participant POS as Fabricante POS
     participant DynamoDB
 
     Usuário->>S3: Upload de APK
-    S3-->>EventBridge: Evento de novo arquivo
-    EventBridge-->>StepFn: Inicia orquestração
-    StepFn-->>Lambda: Executa função de assinatura
-    Lambda-->>POS: Solicita assinatura do APK
-    POS-->>Lambda: Retorna APK assinado
-    Lambda-->>DynamoDB: Salva resultado/log
-    Lambda-->>S3: Salva APK assinado
-    StepFn-->>Usuário: Notifica conclusão
+    S3-->>Orquestrator: Evento de novo arquivo
+    Orquestrator-->>EventBus: Publica eventos ("download", "sign", "upload")
+    EventBus-->>WorkerPool: Executa handlers paralelos
+    WorkerPool-->>POS: Solicita assinatura do APK
+    POS-->>WorkerPool: Retorna APK assinado
+    WorkerPool-->>DynamoDB: Salva resultado/log
+    WorkerPool-->>S3: Salva APK assinado
+    WorkerPool-->>Usuário: Notifica conclusão
 ```
 
 ## Fluxograma Geral
