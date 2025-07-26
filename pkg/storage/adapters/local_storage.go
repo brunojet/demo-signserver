@@ -49,7 +49,8 @@ func (l *LocalStorageService) DownloadFileFromS3(fileInfo *storage.FileInfo) err
 
 	hash := md5.New()
 	mw := io.MultiWriter(out, hash)
-	size, err := io.Copy(mw, in)
+	buf := make([]byte, 1024*1024) // 1MB buffer
+	size, err := io.CopyBuffer(mw, in, buf)
 	if err != nil {
 		return fmt.Errorf("erro ao copiar arquivo: %w", err)
 	}
@@ -77,7 +78,8 @@ func (l *LocalStorageService) UploadToS3(fileInfo *storage.FileInfo) error {
 		return fmt.Errorf("erro ao criar arquivo destino: %w", err)
 	}
 	defer out.Close()
-	_, err = io.Copy(out, in)
+	buf := make([]byte, 1024*1024) // 1MB buffer
+	_, err = io.CopyBuffer(out, in, buf)
 	return err
 }
 
